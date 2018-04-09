@@ -37,6 +37,7 @@ int mkFS(long deviceSize)
  */
 int mountFS(void)
 {
+	bread();
 	return -1;
 }
 
