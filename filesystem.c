@@ -7,6 +7,7 @@
  */
 
 #include <stdlib.h>
+
 #include "include/filesystem.h"		// Headers for the core functionality
 #include "include/auxiliary.h"		// Headers for auxiliary functions
 #include "include/metadata.h"		// Type and structure declaration of the file system
