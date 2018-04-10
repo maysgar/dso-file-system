@@ -16,25 +16,29 @@ static inline void bitmap_setbit(char *bitmap_, int i_, int val_) {
 }
 
 typedef struct{
-  unsigned int magicNum;            /*Magic number of the superblock*/
-  unsigned int InodeMapNumBlocks;   /*Number of blocks of the i-node map*/
-  unsigned int DataMapNumBlock;     /*Number of blocks of the data map*/
+  unsigned int magicNum;                                    /*Magic number of the superblock*/
+  //NF6 The file system will be used on disks from 50 KiB to 10 MiB.
+  //Funcion para determinar esto, ya que es un rango de valores...
+  unsigned int deviceSize;                                  /*Total disk space*/
+  unsigned int InodeMapNumBlocks[40];                       /*Number of blocks of the i-node map*/
+  unsigned int DataMapNumBlock[deviceSize/SIZE_OF_BLOCK];   /*Number of blocks of the data map*/
   //NF1 The maximum number of files in the file system will never be higher than 40.
-  unsigned int numinodes = 40;      /*Number of i-nodes in the device*/
-  //unsigned int firstinode;          /*Number of the 1st i-node in the device*/
-  unsigned int dataBlockNum;        /*Number of data blocks in the device*/
-  //unsigned int firstDataBlock;      /*Number of the 1st data block*/
-  unsigned int deviceSize;          /*Total disk space*/
-  char padding[];                   /*Padding field for fulfilling a block*/
+  unsigned int numinodes = 40;                              /*Number of i-nodes in the device*/
+  unsigned int dataBlockNum = deviceSize/SIZE_OF_BLOCK;     /*Number of data blocks in the device*/
+  char padding[];                                           /*Padding field for fulfilling a block*/
+  //unsigned int firstinode;                                /*Number of the 1st i-node in the device*/
+  //unsigned int firstDataBlock;                            /*Number of the 1st data block*/
 } superblock_t;
 
 typedef struct{
+  //?????
   char type = 'REGULAR';            /*FILE_T*/
   //NF2 The maximum length of the file name will be 32 characters.
   char name[32];                    /*file name*/
-  unsigned int inodesContent[200];  /*directory i-node list*/
-  unsigned int size;                /*Current file size in Bytes*/
+  //NF3 The maximum size of the file will be 1 MiB.
+  unsigned int size = 1048576;      /*Current file size in Bytes*/
   char padding[];                   /*Padding field for fulfilling a block*/
+  //unsigned int inodesContent[200];  /*i-node list*/
 } inode_t;
 
 int indirect_block[SIZE_OF_BLOCK/POINTER_BYTES]; /*Indirect Block*/
