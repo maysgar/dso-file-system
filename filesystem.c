@@ -6,10 +6,15 @@
  * @date	01/03/2017
  */
 
+#include <stdlib.h>
 #include "include/filesystem.h"		// Headers for the core functionality
 #include "include/auxiliary.h"		// Headers for auxiliary functions
 #include "include/metadata.h"		// Type and structure declaration of the file system
 #include "include/crc.h"			// Headers for the CRC functionality
+
+
+superblock_t sb;
+inode_t inode;
 
 
 /*
@@ -23,14 +28,23 @@
  * @param deviceSize: size of the disk to be formatted in bytes.
  * @return 	0 if success, -1 otherwise.
  */
-
-superblock_t sb;
-inode_t inode;
-
 int mkFS(long deviceSize)
 {
+	/* check the validity of the size of the device */
+	if(deviceSize < MINIMUM_FS_SIZE || deviceSize > MAX_FILE_SYSTEM_SIZE){
+    	return -1;
+	}
+	/* set the size of the disk */
 	sb.deviceSize = deviceSize;
-	return -1;
+	/*Number of data blocks in the device*/
+	sb.dataBlockNum = (unsigned int) (int) (sb.deviceSize / SIZE_OF_BLOCK);
+	/*Number of i-nodes in the device*/
+	sb.numinodes = INODE_NUMBER;
+	/*FILE_T*/
+	inode.type = TYPE_REGULAR;
+
+	free(sb.dataMapNumBlock); /* esto hay que ponerlo en unmount pero lo dejo aquí de momentopara que no estalle por los aires */
+	return 0;
 }
 
 /*
@@ -42,7 +56,7 @@ int mkFS(long deviceSize)
  */
 int mountFS(void)
 {
-	bread();
+	// bread();  El gabolo y sus liaditas
 	return -1;
 }
 
