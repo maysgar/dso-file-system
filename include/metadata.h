@@ -24,6 +24,7 @@ typedef struct{
   unsigned int DataMapNumBlock[deviceSize/SIZE_OF_BLOCK];   /*Number of blocks of the data map*/
   //NF1 The maximum number of files in the file system will never be higher than 40.
   unsigned int numinodes = 40;                              /*Number of i-nodes in the device*/
+  //DETERMINED IN create_disk.c IN FIRST ARGUMENT (atoi(argv[1]))
   unsigned int dataBlockNum = deviceSize/SIZE_OF_BLOCK;     /*Number of data blocks in the device*/
   char padding[];                                           /*Padding field for fulfilling a block*/
   //unsigned int firstinode;                                /*Number of the 1st i-node in the device*/
