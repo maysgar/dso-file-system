@@ -23,8 +23,13 @@
  * @param deviceSize: size of the disk to be formatted in bytes.
  * @return 	0 if success, -1 otherwise.
  */
+
+superblock_t sb;
+inode_t inode;
+
 int mkFS(long deviceSize)
 {
+	sb.deviceSize = deviceSize;
 	return -1;
 }
 
