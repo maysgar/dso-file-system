@@ -15,6 +15,7 @@
 
 
 superblock_t sb;
+superblock_t emptySuperBlock;
 inode_t inode;
 
 
@@ -52,6 +53,9 @@ int mkFS(long deviceSize)
 	sb.firstDataBlock = -1; /* Initially there is no data */
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
+
+	printSuperBlock(sb);
+	printSuperBlock(emptySuperBlock);
 	return 0;
 }
 
@@ -202,4 +206,34 @@ int checkFS(void)
 int checkFile(char *fileName)
 {
 	return -2;
+}
+
+void printSuperBlock(superblock_t superBlock){
+	if(printf("Magic number: %d\n", superBlock.magicNum) < 0){
+		printf("Could not print Magic number");
+	}
+	if(printf("Number of blocks of the i-node map: %d\n", superBlock.inodeMapNumBlocks) < 0){
+		printf("Could not print Number of blocks of the i-node map");
+	}
+	if(printf("Number of blocks of the data map: %d\n", superBlock.dataMapNumBlock) < 0){
+		printf("Could not print Number of blocks of the data map");
+	}
+	if(printf("Number of i-nodes in the device: %d\n", superBlock.numInodes) < 0){
+		printf("Could not print Number of i-nodes in the device");
+	}
+	if(printf("Number of the 1st i-node in the device  %d\n", superBlock.firstInode) < 0){
+		printf("Could not print Number of the 1st i-node in the device");
+	}
+	if(printf("Number of data blocks in the device: %d\n", superBlock.dataBlockNum) < 0){
+		printf("Could not print Number of data blocks in the device");
+	}
+	if(printf("Number of the 1st data block: %d\n", superBlock.firstDataBlock) < 0){
+		printf("Could not print Number of the 1st data block");
+	}
+	if(printf("Total disk space: %d\n", superBlock.deviceSize) < 0){
+		printf("Could not print Total disk space");
+	}
+	if(printf("Padding field: %s\n", superBlock.padding) < 0){
+		printf("Could not print Padding field:");
+	}
 }

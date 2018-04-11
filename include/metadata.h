@@ -52,6 +52,6 @@ typedef struct{
 char * i_map;                         /* inode map */
 char * b_map;                         /* block map */
 
-
+void printSuperBlock(superblock_t superBlock);
 // int indirect_block[SIZE_OF_BLOCK/POINTER_BYTES]; /*Indirect Block*/ Gabolo me lo vas a explicar tu
 //DEFINE POINTER_BYTES
