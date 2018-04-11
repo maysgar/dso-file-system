@@ -31,20 +31,27 @@ inode_t inode;
  */
 int mkFS(long deviceSize)
 {
+	int deviceSizeInt = (int) (deviceSize); /* convert the size of the file to integer */
 	/* check the validity of the size of the device */
-	if(deviceSize < MINIMUM_FS_SIZE || deviceSize > MAX_FILE_SYSTEM_SIZE){
+	if(deviceSizeInt < MIN_FILE_SYSTEM_SIZE || deviceSizeInt > MAX_FILE_SYSTEM_SIZE){
     	return -1;
 	}
-	/* set the size of the disk */
-	sb.deviceSize = deviceSize;
-	/*Number of data blocks in the device*/
-	sb.dataBlockNum = (unsigned int) (int) (sb.deviceSize / SIZE_OF_BLOCK);
-	/*Number of i-nodes in the device*/
-	sb.numinodes = INODE_NUMBER;
-	/*FILE_T*/
-	inode.type = TYPE_REGULAR;
-
-	free(sb.dataMapNumBlock); /* esto hay que ponerlo en unmount pero lo dejo aquí de momentopara que no estalle por los aires */
+	/* Superblock's magic number */
+	sb.magicNum = 1; /* por poner algo */
+	/* Number of blocks of the inode map */
+	sb.inodeMapNumBlocks = 0; /* Initially there is no inodes */
+	/* Number of blocks of the data map */
+	sb.dataMapNumBlock = 0; /* Initially there is no data */
+	/* Number of inodes in the device */
+	sb.numInodes = 0; /* Initially there is no inodes */
+	/* Number of the first inode */
+	sb.firstInode = -1; /* There is no inode */
+	/* Number of data blocks in the device */
+	sb.dataBlockNum = 0; /* Initially there is no data */
+	/* Number of the first data block */
+	sb.firstDataBlock = -1; /* Initially there is no data */
+	/* Set the size of the disk */
+	sb.deviceSize = deviceSizeInt;
 	return 0;
 }
 
