@@ -7,6 +7,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "include/filesystem.h"		// Headers for the core functionality
 #include "include/auxiliary.h"		// Headers for auxiliary functions
@@ -14,9 +15,8 @@
 #include "include/crc.h"			// Headers for the CRC functionality
 
 
-superblock_t sb;
-superblock_t emptySuperBlock;
-inode_t inode;
+superblock_t sb; /* superblock */
+inode_t * inode; /* array of inodes */
 
 
 /*
@@ -35,7 +35,7 @@ int mkFS(long deviceSize)
 	int deviceSizeInt = (int) (deviceSize); /* convert the size of the file to integer */
 	/* check the validity of the size of the device */
 	if(deviceSizeInt < MIN_FILE_SYSTEM_SIZE || deviceSizeInt > MAX_FILE_SYSTEM_SIZE){
-    	return -1;
+		return -1;
 	}
 	/* Superblock's magic number */
 	sb.magicNum = 1; /* por poner algo */
@@ -44,18 +44,41 @@ int mkFS(long deviceSize)
 	/* Number of blocks of the data map */
 	sb.dataMapNumBlock = 0; /* Initially there is no data */
 	/* Number of inodes in the device */
-	sb.numInodes = 0; /* Initially there is no inodes */
+	//sb.numInodes = 0; /* Initially there is no inodes */
+	sb.numInodes = 50; /* * */
 	/* Number of the first inode */
-	sb.firstInode = -1; /* There is no inode */
+	//sb.firstInode = -1; /* There is no inode */
+	sb.firstInode = 0; /* * */
 	/* Number of data blocks in the device */
-	sb.dataBlockNum = 0; /* Initially there is no data */
+	//sb.dataBlockNum = 0; /* Initially there is no data */
+	sb.dataBlockNum = 50; /* * */
 	/* Number of the first data block */
-	sb.firstDataBlock = -1; /* Initially there is no data */
+	//sb.firstDataBlock = -1; /* Initially there is no data */
+	sb.firstDataBlock = 0; /* * */
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
 
+	/* memory for the inodes */
+	inode = malloc(sizeof(inode_t) * sb.numInodes);
+
+	/* allocating memory to the bitmaps */
+	i_map = malloc(sizeof(char) * sb.numInodes); /* inode bitmap */
+	b_map = malloc(sizeof(char) * sb.dataBlockNum); /* block bitmap */
+
+	/* Setting as free all the bitmap positions */
+	for(int i = 0; i < sb.numInodes; i++){ /* inode bitmap */
+		i_map[i] = 0; /* free */
+	}
+	for(int i = 0; i < sb.dataBlockNum; i++){ /* block bitmap */
+		b_map[i] = 0; /* free */
+	}
+
+	/* Free the inodes */
+	for(int i = 0; i < sb.numInodes; i++){ /* block bitmap */
+		memset(&(inode[i]), 0, sizeof(inode_t));
+	}
+
 	printSuperBlock(sb);
-	printSuperBlock(emptySuperBlock);
 	return 0;
 }
 
