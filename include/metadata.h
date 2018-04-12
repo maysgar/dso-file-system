@@ -13,8 +13,8 @@
 #define PADDING_INODE 999           /* Padding size for the inode */
 #define MAX_BLOCK_PER_FILE 512      /* Maximum number of blocks per file */
 
-#define BITMAP_INODES 40            /* size of the bitmap of inodes */
-#define BITMAP_BLOCK 512*40         /* size of the bitmap of blocks */
+#define BITMAP_INODES 40            /* size of the bitmap of inodes (in bits) */
+#define BITMAP_BLOCK 512*40         /* size of the bitmap of blocks (in bits) */
 
 /* Variables used in mkFS for validating the size of the device */
 #define MIN_FILE_SYSTEM_SIZE 50 * 1024    /* Minimum file system size */
