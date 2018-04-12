@@ -5,6 +5,9 @@
  * @brief 	Definition of the structures and data types of the file system.
  * @date	01/03/2017
  */
+
+/*********   necesitamos 512 bloques por file como máximo /*********
+
 #define SIZE_OF_BLOCK 2048          /* The file system block size will be 2048 bytes */
 #define INODE_MAX_NUMBER 40         /* Maximum number of i-nodes in the device */
 #define MAX_SIZE_FILE 1048576       /* Maximum file size in bytes */
