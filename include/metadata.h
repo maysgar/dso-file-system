@@ -51,5 +51,7 @@ char * i_map;                         /* inode map */
 char * b_map;                         /* block map */
 
 void printSuperBlock(superblock_t superBlock);
+int umount (void); /* write the default File System into the disk */
+int syncFS(void); /* writes the metadata into the disk */
 // int indirect_block[SIZE_OF_BLOCK/POINTER_BYTES]; /*Indirect Block*/ Gabolo me lo vas a explicar tu
 //DEFINE POINTER_BYTES

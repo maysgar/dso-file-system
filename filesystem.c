@@ -13,7 +13,7 @@
 #include "include/auxiliary.h"		// Headers for auxiliary functions
 #include "include/metadata.h"		// Type and structure declaration of the file system
 #include "include/crc.h"			// Headers for the CRC functionality
-
+#include "blocks_cache.h"
 
 superblock_t sb; /* superblock */
 inode_t * inode; /* array of inodes */
@@ -40,18 +40,16 @@ int mkFS(long deviceSize)
 	/* Superblock's magic number */
 	sb.magicNum = 1; /* por poner algo */
 	/* Number of blocks of the inode map */
-	sb.inodeMapNumBlocks = INODE_MAX_NUMBER; /* as many entries as inodes */
+	sb.inodeMapNumBlocks = BITMAP_INODES; /* as many bits as inodes */
 	/* Number of blocks of the data map */
-	sb.dataMapNumBlock = deviceSizeInt / SIZE_OF_BLOCK; /* The size of the device over the block size */
+	sb.dataMapNumBlock = BITMAP_BLOCK; /* as many as the maximum amount of files */
 	/* Number of inodes in the device */
 	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
 	/* Number of the first inode */
-	//sb.firstInode = -1; /* There is no inode */
 	sb.firstInode = 0; /* * */
 	/* Number of data blocks in the device */
 	sb.dataBlockNum = deviceSizeInt / SIZE_OF_BLOCK; /* The size of the device over the block size */
 	/* Number of the first data block */
-	//sb.firstDataBlock = -1; /* Initially there is no data */
 	sb.firstDataBlock = 0; /* * */
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
@@ -76,6 +74,11 @@ int mkFS(long deviceSize)
 		memset(&(inode[i]), 0, sizeof(inode_t));
 	}
 
+	/* write the default file system into disk */
+	if( umount() < 0 ){ /* check for errors in umount */
+		printf("Error in umount\n");
+		return -1;
+	}
 	printSuperBlock(sb);
 	return 0;
 }
@@ -257,4 +260,39 @@ void printSuperBlock(superblock_t superBlock){
 	if(printf("Padding field: %s\n", superBlock.padding) < 0){
 		printf("Could not print Padding field:");
 	}
+}
+
+/**
+ * Writes the default File System into the disk
+ * @return -1 in error and 0 otherwise
+ */
+int umount (void){
+	/* check that all the files are closed  */
+	for(int i = 0; i < sb.numInodes; i++){
+		if(i_map[i] == 1){ /* check if the inode is in used */
+			return -1; /* inode in used  */
+		}
+	}
+
+	/* flush metadata on disk */
+	if( syncFS() < 0){ /* check errors in sync */
+		printf("Error in sync\n");
+	}
+	return 0;
+}
+
+/**
+ * Writes the metadata into the disk
+ *
+ * @return -1 in error and 0 otherwise
+ */
+int syncFS (void){
+	/* write the superblock into the first block of the disk */
+	bwrite("disk.data", 1, (char *) (&sb));
+
+	/* write inode map to disk */
+	for(int i = 0; i < sb.inodeMapNumBlocks; i++){
+		//bwrite("disk.data", 2+i, (char *) (&sb)); /*  */
+	}
+	return 0;
 }
