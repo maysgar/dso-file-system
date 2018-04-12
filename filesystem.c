@@ -42,15 +42,14 @@ int mkFS(long deviceSize)
 	/* Number of blocks of the inode map */
 	sb.inodeMapNumBlocks = INODE_MAX_NUMBER; /* as many entries as inodes */
 	/* Number of blocks of the data map */
-	sb.dataMapNumBlock = 0; /* Initially there is no data */
+	sb.dataMapNumBlock = deviceSizeInt / SIZE_OF_BLOCK; /* The size of the device over the block size */
 	/* Number of inodes in the device */
 	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
 	/* Number of the first inode */
 	//sb.firstInode = -1; /* There is no inode */
 	sb.firstInode = 0; /* * */
 	/* Number of data blocks in the device */
-	//sb.dataBlockNum = 0; /* Initially there is no data */
-	sb.dataBlockNum = 50; /* * */
+	sb.dataBlockNum = deviceSizeInt / SIZE_OF_BLOCK; /* The size of the device over the block size */
 	/* Number of the first data block */
 	//sb.firstDataBlock = -1; /* Initially there is no data */
 	sb.firstDataBlock = 0; /* * */
