@@ -40,12 +40,11 @@ int mkFS(long deviceSize)
 	/* Superblock's magic number */
 	sb.magicNum = 1; /* por poner algo */
 	/* Number of blocks of the inode map */
-	sb.inodeMapNumBlocks = 0; /* Initially there is no inodes */
+	sb.inodeMapNumBlocks = INODE_MAX_NUMBER; /* as many entries as inodes */
 	/* Number of blocks of the data map */
 	sb.dataMapNumBlock = 0; /* Initially there is no data */
 	/* Number of inodes in the device */
-	//sb.numInodes = 0; /* Initially there is no inodes */
-	sb.numInodes = 50; /* * */
+	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
 	/* Number of the first inode */
 	//sb.firstInode = -1; /* There is no inode */
 	sb.firstInode = 0; /* * */
