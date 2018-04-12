@@ -5,23 +5,17 @@
  * @brief 	Definition of the structures and data types of the file system.
  * @date	01/03/2017
  */
-
-/*********   necesitamos 512 bloques por file como máximo /*********
-
-#define SIZE_OF_BLOCK 2048          /* The file system block size will be 2048 bytes */
+#define SIZE_OF_BLOCK 1024 * 2      /* The file system block size will be 2048 bytes */
 #define INODE_MAX_NUMBER 40         /* Maximum number of i-nodes in the device */
-#define MAX_SIZE_FILE 1048576       /* Maximum file size in bytes */
+#define MAX_SIZE_FILE 1024 * 1024   /* Maximum file size in bytes */
 #define NAME_MAX 32                 /* NF2 The maximum length of the file name will be 32 characters */
-#define MAX_DIR_CAPACITY 200        /* Por poner algo */
 #define PADDING_SUPERBLOCK 999      /* Padding size for the superblock */
 #define PADDING_INODE 999           /* Padding size for the inode */
+#define MAX_BLOCK_PER_FILE 512      /* Maximum number of blocks per file */
 
 /* Variables used in mkFS for validating the size of the device */
-#define MIN_FILE_SYSTEM_SIZE 51200    /* Minimum file system size */
-#define MAX_FILE_SYSTEM_SIZE 10485760 /* Maximum file system size */
-
-#define TYPE_FILE 'F'
-#define TYPE_DIRECTORY 'D'
+#define MIN_FILE_SYSTEM_SIZE 50 * 1024    /* Minimum file system size */
+#define MAX_FILE_SYSTEM_SIZE 10 * 1024 * 1024 /* Maximum file system size */
 
 #define bitmap_getbit(bitmap_, i_) (bitmap_[i_ >> 3] & (1 << (i_ & 0x07)))
 static inline void bitmap_setbit(char *bitmap_, int i_, int val_) {
@@ -44,9 +38,7 @@ typedef struct{
 } superblock_t;
 
 typedef struct{
-  char type;                          /* File or Directory */
   char name[NAME_MAX];                /* file name */
-  unsigned int inodesContent[MAX_DIR_CAPACITY]; /* Directory inode list */
   unsigned int size;                  /* Current file size in Bytes */
   unsigned int directBlock;           /* Direct block number */
   char padding[PADDING_INODE];        /* Padding field for fulfilling a block */
