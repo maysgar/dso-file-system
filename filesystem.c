@@ -37,22 +37,23 @@ int mkFS(long deviceSize)
 	if(deviceSizeInt < MIN_FILE_SYSTEM_SIZE || deviceSizeInt > MAX_FILE_SYSTEM_SIZE){
 		return -1;
 	}
+
 	/* Superblock's magic number */
 	sb.magicNum = 1; /* por poner algo */
 	/* Number of blocks of the inode map */
-	sb.inodeMapNumBlocks = BITMAP_INODES; /* as many bits as inodes */
+	sb.inodeMapNumBlocks = 1; /* as many bits as inodes */  /* aquí hay que llamar al método de isma */
 	/* Number of blocks of the data map */
-	sb.dataMapNumBlock = BITMAP_BLOCK; /* as many as the maximum amount of files */
+	sb.dataMapNumBlock = (BITMAP_BLOCK / 1024); /* método mágico de isma */ /* as many as the maximum amount of files */
 	/* Number of inodes in the device */
 	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
-	/* Number of the first inode */
-	sb.firstInode = 0; /* * */
 	/* Number of data blocks in the device */
 	sb.dataBlockNum = deviceSizeInt / SIZE_OF_BLOCK; /* The size of the device over the block size */
-	/* Number of the first data block */
-	sb.firstDataBlock = 0; /* * */
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
+    /* Number of the first inode */
+    sb.firstInode = 2 + sb.inodeMapNumBlocks + sb.dataMapNumBlock; /* the first inode is after the data clock bitmap */
+    /* Number of the first data block */
+    sb.firstDataBlock = sb.firstInode + sb.numInodes; /* after the last inode */
 
 	/* memory for the inodes */
 	inode = malloc(sizeof(inode_t) * sb.numInodes);
@@ -197,7 +198,6 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	return -1;
 }
 
-
 /*
  * @brief	Modifies the position of the seek pointer of a file according to a given reference and offset.
  *
@@ -288,11 +288,30 @@ int umount (void){
  */
 int syncFS (void){
 	/* write the superblock into the first block of the disk */
-	bwrite("disk.data", 1, (char *) (&sb));
-
-	/* write inode map to disk */
+	if( bwrite(DEVICE_IMAGE, 1, (char *) (&sb)) < 0){
+	    printf("Error in bwrite (syncFS)\n");
+        return -1;
+	}
+    /* write inode map to disk */
 	for(int i = 0; i < sb.inodeMapNumBlocks; i++){
-		//bwrite("disk.data", 2+i, (char *) (&sb)); /*  */
+        if( bwrite(DEVICE_IMAGE, 2+i, (char *) (i_map) + i*BLOCK_SIZE) < 0){
+            printf("Error in bwrite (syncFS)\n");
+            return -1;
+        }
+	}
+    /* write block map to disk */
+    for(int i = 0; i < sb.dataMapNumBlock; i++){
+        if( bwrite(DEVICE_IMAGE, 2+i+sb.inodeMapNumBlocks, (char *) (&b_map + i*BLOCK_SIZE)) < 0){
+            printf("Error in bwrite (syncFS)\n");
+            return -1;
+        }
+    }
+	/* write inodes to disk */
+	for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE) ; i++){
+		if( bwrite(DEVICE_IMAGE, i+sb.firstInode, (char *) (inode + i*BLOCK_SIZE)) < 0){
+			printf("Error in bwrite (syncFS)\n");
+            return -1;
+        }
 	}
 	return 0;
 }
