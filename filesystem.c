@@ -131,7 +131,15 @@ int mountFS(void)
  */
 int unmountFS(void)
 {
-	return -1;
+	/* delete inode map */
+    memset(&(i_map), 0, sb.inodeMapNumBlocks);
+	/* delete block map */
+	memset(&(b_map), 0, sb.dataMapNumBlock);
+	/* Free the inodes */
+	for(int i = 0; i < sb.numInodes; i++){ /* block bitmap */
+		memset(&(inode[i]), 0, sizeof(inode_t));
+	}
+    return -1;
 }
 
 /*
