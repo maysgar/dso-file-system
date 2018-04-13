@@ -93,8 +93,33 @@ int mkFS(long deviceSize)
  */
 int mountFS(void)
 {
-	// bread();  El gabolo y sus liaditas
-	return -1;
+    /* read the superblock from the disk to the new superblock */
+    if( bread(DEVICE_IMAGE, 1, (char *) (&sb)) < 0){
+        printf("Error in bread (mountFS)\n");
+        return -1;
+    }
+    /* read from disk inode map */
+    for(int i = 0; i < sb.inodeMapNumBlocks; i++){
+        if( bread(DEVICE_IMAGE, 2+i, (char *) (i_map) + i*BLOCK_SIZE) < 0){
+            printf("Error in bread (mountFS)\n");
+            return -1;
+        }
+    }
+    /* read from disk block map */
+    for(int i = 0; i < sb.dataMapNumBlock; i++){
+        if( bread(DEVICE_IMAGE, 2+i+sb.inodeMapNumBlocks, (char *) (b_map) + i*BLOCK_SIZE) < 0){
+            printf("Error in bread (mountFS)\n");
+            return -1;
+        }
+    }
+    /* read inodes from disk */
+    for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE); i++){
+        if( bread(DEVICE_IMAGE, i+sb.firstInode, (char *) (inode) + i*BLOCK_SIZE) < 0){
+            printf("Error in bread (mountFS)\n");
+            return -1;
+        }
+    }
+	return 0;
 }
 
 /*
