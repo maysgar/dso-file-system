@@ -22,30 +22,23 @@
 #define DEV_SIZE 	N_BLOCKS * BLOCK_SIZE	// Device size, in bytes
 
 int checkMakeFS();
+int checkSyncFS();
+int testOutput(int ret, char * msg);
 
 /**
  * Test all the funtionalities of the method mkFS
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
  */
 int test_mkFS(){
-	int ret; /* return variable */
-
 	/* Normal execution of mkFS */
-	ret = mkFS(DEV_SIZE);
-	if(ret != 0) {
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST mkFS ", ANSI_COLOR_RED, "FAILED\n", ANSI_COLOR_RESET);
-		return -1;
-	}
-	fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST mkFS ", ANSI_COLOR_GREEN, "SUCCESS\n", ANSI_COLOR_RESET);
-
+	if(testOutput(mkFS(DEV_SIZE), "mkFS") < 0) {return -1;}
 	/* Check the correct assigned values of the superblock in the FS */
-	ret = checkMakeFS();
-	if(ret != 0) {
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST checkMakeFS ", ANSI_COLOR_RED, "FAILED\n", ANSI_COLOR_RESET);
-		return -1;
-	}
-	fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST checkMakeFS ", ANSI_COLOR_GREEN, "SUCCESS\n", ANSI_COLOR_RESET);
+    if(testOutput(checkMakeFS(), "checkMakeFS") < 0) {return -1;}
+    /* Check the correct writing of the superblock into the disk */
+    if(testOutput(checkSyncFS(), "syncFS") < 0) {return -1;}
 
-	printf("\n");
+    printf("\n");
 	return 0;
 }
 
@@ -80,6 +73,45 @@ int checkMakeFS(){
 		return -1;
 	}
 	return 0;
+}
+
+/**
+ * Checks the correct writing of the superblock data into the disk
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkSyncFS(){
+    char * buf = malloc(sizeof(char) * 1 * SIZE_OF_BLOCK); /* auxiliary buffer */
+    /* read the first block of the disk */
+    if( bread(DEVICE_IMAGE, 1, buf) < 0){
+        printf("Error in bread (mountFS)\n");
+        return -1;
+    }
+    char * aux = (char *) (&sb);
+    char * buf2 = malloc(sizeof(char) * 1 * SIZE_OF_BLOCK); /* auxiliary buffer */
+    for(int i = 0; i < SIZE_OF_BLOCK; i++){
+        buf2[i] = aux[i];
+    }
+    buf2[SIZE_OF_BLOCK] = '\0';
+    if(strcmp(buf, buf2) != 0){ return -1;} /* the first blocks are different */
+    return 0;
+}
+
+/**
+ * Print the output message of a test method
+ *
+ * @param ret: the return value of the method executed
+ * @param msg: String to print which is the name of the method executed
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int testOutput(int ret, char * msg){
+    if(ret != 0) {
+        fprintf(stdout, "%s%s%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST " ,msg, " ", ANSI_COLOR_RED, "FAILED\n", ANSI_COLOR_RESET);
+        return -1;
+    }
+    fprintf(stdout, "%s%s%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST ", msg, " ", ANSI_COLOR_GREEN, "SUCCESS\n", ANSI_COLOR_RESET);
+    return 0;
 }
 
 int main() {

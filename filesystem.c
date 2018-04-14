@@ -265,36 +265,6 @@ int checkFile(char *fileName)
 	return -2;
 }
 
-void printSuperBlock(superblock_t superBlock){
-	if(printf("Magic number: %d\n", superBlock.magicNum) < 0){
-		printf("Could not print Magic number");
-	}
-	if(printf("Number of blocks of the i-node map: %d\n", superBlock.inodeMapNumBlocks) < 0){
-		printf("Could not print Number of blocks of the i-node map");
-	}
-	if(printf("Number of blocks of the data map: %d\n", superBlock.dataMapNumBlock) < 0){
-		printf("Could not print Number of blocks of the data map");
-	}
-	if(printf("Number of i-nodes in the device: %d\n", superBlock.numInodes) < 0){
-		printf("Could not print Number of i-nodes in the device");
-	}
-	if(printf("Number of the 1st i-node in the device  %d\n", superBlock.firstInode) < 0){
-		printf("Could not print Number of the 1st i-node in the device");
-	}
-	if(printf("Number of data blocks in the device: %d\n", superBlock.dataBlockNum) < 0){
-		printf("Could not print Number of data blocks in the device");
-	}
-	if(printf("Number of the 1st data block: %d\n", superBlock.firstDataBlock) < 0){
-		printf("Could not print Number of the 1st data block");
-	}
-	if(printf("Total disk space: %d\n", superBlock.deviceSize) < 0){
-		printf("Could not print Total disk space");
-	}
-	if(printf("Padding field: %s\n", superBlock.padding) < 0){
-		printf("Could not print Padding field:");
-	}
-}
-
 /**
  * Writes the default File System into the disk
  * @return -1 in error and 0 otherwise
@@ -347,4 +317,34 @@ int syncFS (void){
         }
 	}
 	return 0;
+}
+
+void printSuperBlock(superblock_t superBlock){
+    if(printf("Magic number: %d\n", superBlock.magicNum) < 0){
+        printf("Could not print Magic number");
+    }
+    if(printf("Number of blocks of the i-node map: %d\n", superBlock.inodeMapNumBlocks) < 0){
+        printf("Could not print Number of blocks of the i-node map");
+    }
+    if(printf("Number of blocks of the data map: %d\n", superBlock.dataMapNumBlock) < 0){
+        printf("Could not print Number of blocks of the data map");
+    }
+    if(printf("Number of i-nodes in the device: %d\n", superBlock.numInodes) < 0){
+        printf("Could not print Number of i-nodes in the device");
+    }
+    if(printf("Number of the 1st i-node in the device  %d\n", superBlock.firstInode) < 0){
+        printf("Could not print Number of the 1st i-node in the device");
+    }
+    if(printf("Number of data blocks in the device: %d\n", superBlock.dataBlockNum) < 0){
+        printf("Could not print Number of data blocks in the device");
+    }
+    if(printf("Number of the 1st data block: %d\n", superBlock.firstDataBlock) < 0){
+        printf("Could not print Number of the 1st data block");
+    }
+    if(printf("Total disk space: %d\n", superBlock.deviceSize) < 0){
+        printf("Could not print Total disk space");
+    }
+    if(printf("Padding field: %s\n", superBlock.padding) < 0){
+        printf("Could not print Padding field:");
+    }
 }
