@@ -8,6 +8,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 #include "include/filesystem.h"		// Headers for the core functionality
 #include "include/auxiliary.h"		// Headers for auxiliary functions
@@ -131,6 +136,14 @@ int mountFS(void)
  */
 int unmountFS(void)
 {
+	/*
+	free(inode);
+	free(i_map);
+	free(b_map);
+	return 0;
+	*/
+    // free function does not have a return value 
+
 	/* delete inode map */
     memset(&(i_map), 0, sb.inodeMapNumBlocks);
 	/* delete block map */
@@ -152,9 +165,71 @@ int unmountFS(void)
  * @param fileName: name of the file to be created.
  * @return	0 if success, -1 if the file already exists, -2 in case of error.
  */
-int createFile(char *fileName)
+int createFile(char *fileName)     //ARREGLAR: PUEDE HABER POSICIONES LIBRES POR EL MEDIO DEL IMAP
 {
-	return -2;
+	/* Check NF2 */
+	if(strlen(fileName) > NAME_MAX){
+		printf("File name too long. The maximum length for a file name is 32 characters\n");
+		return -2;
+	}
+	// #include <sys/stat.h> !!!!!
+	struct stat st;
+	stat(fileName, &st);
+	/* Check NF3 */
+	if(st.st_size > MAX_SIZE_FILE){
+		printf("File too large. The maximum size for a file is 1 MiB\n");
+		return -2;
+	}
+	int i = 0;
+	while(inode[i].name != NULL){
+		if(fileName == inode[i].name){  //OJO CUIDADO strcmp() !!!!!!!
+			printf("File already exists\n");
+			return -1;
+		}
+		i++;
+	}
+	int position = 0;
+    i = 0;
+	while(i_map[i] == 1 && i < INODE_MAX_NUMBER){
+		i++;
+	}
+	if(i_map[i] == 1){
+		printf("Maximum number of files reached (40)\n");
+		return -2;
+	}
+	if(i_map[i] == 0){
+		position = i;
+	} /* free */
+
+    /*
+	OTHER OLDER APPROACH
+	for(int i = 0; i < INODE_MAX_NUMBER; i++){ // inode bitmap 
+		if(i_map[i] == 0){
+			position = 1;
+		} // free
+	}
+	// Check NF1 
+	if(position == 0){
+		printf("Maximum number of files reached (40)\n");
+		return -2;
+	}
+	*/
+	
+	//#include <stdio.h> !!!!!!!!!!
+	strcpy(inode[position].name, fileName);
+	inode[position].size = st.st_size;
+	int j = 0;
+	while(b_map[j] == 0){
+		j++;
+	}
+	/* Set the position of the new file as full in the bmap */
+	b_map[position] = 1;
+	inode[position].directBlock = j;
+	//inode[position].padding = SIZE_OF_BLOCK - (8*4);  // unisgned int 2 or 4 bytes????? meterle mierda a pincho hasta que ocupe todo (0)
+
+	/* Set the position of the new file as full in the imap */
+	i_map[position] = 1;
+	return 0;
 }
 
 /*
@@ -162,9 +237,28 @@ int createFile(char *fileName)
  * @param fileName: name of the file to be removed.
  * @return	0 if success, -1 if the file does not exist, -2 in case of error..
  */
-int removeFile(char *fileName)
+int removeFile(char *fileName)													//DEBERIAMOS TAMBIEN CERRAR EL FILE?? closeFile(fileDes);
 {
-	return -2;
+	for(int i = 0; i < sb.numInodes; i++){
+		if(fileName == inode[i].name){   ///OJO CUIDADO STRSCMP()
+			//inode[i].name = "/0";		 //????
+			strcpy(inode[i].name, "/0");        //MIRAR MEMSET()
+			//strcpy(inode[i].name, "");        //otra opcion
+			inode[i].size = 0;           //????
+			inode[i].directBlock = 0;    //????
+			//inode[i].padding = "/0";     //????
+			strcpy(inode[i].padding, "/0");
+
+			/* Set the position of the new file as free in the imap */
+			i_map[i] = 0;
+			printf("File %s deleted\n", fileName);
+			return 0;
+		}
+	}
+	printf("File %s does not exist\n", fileName);
+	return -1;
+	//printf("Error\n");  
+	//return -2;                        //Don't know when to return this
 }
 
 /*
@@ -178,17 +272,44 @@ int removeFile(char *fileName)
  */
 int openFile(char *fileName)
 {
-	return -2;
+	//CRC MIRAR TEMITA INTEGRITY
+	int fileDes = 0;
+	for(int i = 0; i < sb.numInodes; i++){
+		if(fileName == inode[i].name){
+			//#include <fcntl.h> !!!!!!!!!!
+			if((fileDes = open(fileName, O_RDWR)) < 0){   //PELEAS MUY MUY FUERTES CON EL PATH  /filesystem/fileName
+				printf("Error opening file: %s\n", fileName);
+				return -2;
+			}
+			//#include <unistd.h>  !!!!!!!!!!!
+			//#include <sys/types.h>   !!!!!!!!!!!
+			if(lseek(fileDes, 0, SEEK_SET) < 0){
+				printf("Error moving the pointer of file: %s\n", fileName);
+				return -2;
+			}
+			printf("File %s successfully opened\n", fileName);
+			return fileDes;
+		}
+	}
+	printf("File %s does not exist\n", fileName);
+	return -1;
 }
 
 /*
  * @brief	Closes a file.
- * @param fileName: name of the file to be created.
+ * @param fileDescriptor: descriptor of the file to close.
  * @return	0 if success, -1 otherwise.
  */
 int closeFile(int fileDescriptor)
 {
-	return -1;
+	//#include <unistd.h>   !!!!!!!
+	//MIRAR PDF
+	if(close(fileDescriptor) < 0){
+		printf("Error closing the file\n");
+		return -1;
+	}
+	printf("File closed successfully\n");
+	return 0;
 }
 
 /*
@@ -205,7 +326,15 @@ int closeFile(int fileDescriptor)
  */
 int readFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	return -1;
+	ssize_t bytesRead = 0;
+	while(bytesRead < numBytes){
+		if(bytesRead += read(fileDescriptor, buffer, numBytes) < 0){ //read files 1 byte by one
+		printf("Error reading the file\n");
+		return -1;
+		}
+	}
+	printf("%zd bytes successfully read from the file\n", bytesRead);
+	return (int)bytesRead;
 }
 
 /*
@@ -228,7 +357,15 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	return -1;
+	ssize_t bytesWritten = 0;
+	while(bytesWritten < numBytes){
+		if(bytesWritten += write(fileDescriptor, buffer, numBytes) < 0){
+			printf("Error when writing in the file\n");
+			return -1;
+		}
+	}
+	printf("%zd bytes successfully written in the file\n", bytesWritten);
+	return (int)bytesWritten;
 }
 
 /*
@@ -244,7 +381,12 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int lseekFile(int fileDescriptor, long offset, int whence)
 {
-	return -1;
+	if(lseek(fileDescriptor, offset, whence) < 0){
+		printf("Error moving the pointer of file: %d\n", fileDescriptor);
+		return -1;
+	}
+	printf("Seek pointer successfully moved\n");
+	return 0;
 }
 
 /*
@@ -347,4 +489,31 @@ void printSuperBlock(superblock_t superBlock){
     if(printf("Padding field: %s\n", superBlock.padding) < 0){
         printf("Could not print Padding field:");
     }
+}
+
+/**
+ * Gives you the needed blocks to store the input bits or bytes
+ * 
+ * @return -1 in case of error and the number of needed blocks otherwise
+ */
+int needed_blocks(int amount, char type){
+	int aux = 0;
+	if(type == 'b'){
+		aux = (amount/8)/SIZE_OF_BLOCK;
+		if(((amount/8)%SIZE_OF_BLOCK) != 0){
+			aux++;
+		}
+	}
+	else if(type == 'B'){
+		aux = amount/SIZE_OF_BLOCK;
+		if((amount%SIZE_OF_BLOCK) != 0){
+			aux++;
+		}
+	}
+	else{
+		printf("Wrong input type.\n bits: 'b'\n Bytes: 'B'\n");
+		return -1;
+	}
+	printf("Blocks needed to store %d bits/bytes is: %d\n", amount, aux);
+	return aux;
 }
