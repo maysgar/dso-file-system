@@ -24,6 +24,7 @@
 int checkMakeFS();
 int checkSyncFS();
 int testOutput(int ret, char * msg);
+int cmpDisk (int startPoint, int blocks, char * structToComp);
 
 /**
  * Test all the funtionalities of the method mkFS
@@ -81,19 +82,45 @@ int checkMakeFS(){
  * @return 0 if all the tests are correct and -1 otherwise
  */
 int checkSyncFS(){
-    char * buf = malloc(sizeof(char) * 1 * SIZE_OF_BLOCK); /* auxiliary buffer */
+    /* compare the superblock with the first block of the disk */
+    if(cmpDisk(1, SIZE_OF_BLOCK, (char *) (&sb)) < 0){ return -1;}
+
+    /* compare the inode map with the one at the disk */
+    for(int i = 0; i < sb.inodeMapNumBlocks; i++){
+    	if(cmpDisk(2 + i, SIZE_OF_BLOCK, i_map) < 0){ return -1;}
+    }
+
+	/* compare the block map with the one at the disk */
+	//for(int i = 0; i < sb.dataMapNumBlock; i++){
+		//printf("%d\n", i);
+		if(cmpDisk(2  + sb.inodeMapNumBlocks, SIZE_OF_BLOCK * sb.dataMapNumBlock , b_map) < 0){ return -1;}
+	//}
+
+    return 0;
+}
+
+/**
+ * Compares the blocks from the disk with the superblock
+ *
+ * @param startPoint: the starting block to read blocks
+ * @param blocks: the number of blocks to compare
+ * @param structToComp: is the struct to compare, such as the superblock, convert to an array of bytes
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int cmpDisk (int startPoint, int blocks, char * structToComp){
+    char * deviceBuf = malloc(sizeof(char) * blocks); /* auxiliary buffer */
     /* read the first block of the disk */
-    if( bread(DEVICE_IMAGE, 1, buf) < 0){
+    if( bread(DEVICE_IMAGE, startPoint, deviceBuf) < 0){
         printf("Error in bread (mountFS)\n");
         return -1;
     }
-    char * aux = (char *) (&sb);
-    char * buf2 = malloc(sizeof(char) * 1 * SIZE_OF_BLOCK); /* auxiliary buffer */
+    char * checkBuf = malloc(sizeof(char) * blocks); /* auxiliary buffer */
     for(int i = 0; i < SIZE_OF_BLOCK; i++){
-        buf2[i] = aux[i];
+		checkBuf[i] = structToComp[i];
     }
-    buf2[SIZE_OF_BLOCK] = '\0';
-    if(strcmp(buf, buf2) != 0){ return -1;} /* the first blocks are different */
+	checkBuf[SIZE_OF_BLOCK] = '\0';
+    if(strcmp(deviceBuf, checkBuf) != 0){ return -1;} /* the first blocks are different */
     return 0;
 }
 
