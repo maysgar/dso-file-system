@@ -179,8 +179,11 @@ int checkUnmountFS(){
 	/* check if the inode map is empty */
 	if(strcmp(b_map, "") != 0){ return -1;}
 
-
-	return 0;
+    /* check if the inodes are empty */
+    for(int i = 0; i < sb.numInodes; i++) { /* block bitmap */
+        if(strcmp(inode[i].name, "") != 0){ return -1;}
+    }
+    return 0;
 }
 
 /**
