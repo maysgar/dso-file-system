@@ -57,3 +57,5 @@ int syncFS(void); /* writes the metadata into the disk */
 //DEFINE POINTER_BYTES
 
 int needed_blocks(int bits, char type);
+void printInode(inode_t inode);
+

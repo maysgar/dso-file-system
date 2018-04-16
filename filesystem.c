@@ -86,6 +86,7 @@ int mkFS(long deviceSize)
 		return -1;
 	}
 	printSuperBlock(sb);
+	printInode(inode[0]);
 	return 0;
 }
 
@@ -99,7 +100,7 @@ int mkFS(long deviceSize)
 int mountFS(void)
 {
     /* read the superblock from the disk to the new superblock */
-    if( bread(DEVICE_IMAGE, 1, (char *) (&sb)) < 0){
+    if(bread(DEVICE_IMAGE, 1, (char *) (&sb)) < 0){
         printf("Error in bread (mountFS)\n");
         return -1;
     }
@@ -165,23 +166,39 @@ int unmountFS(void)
  * @param fileName: name of the file to be created.
  * @return	0 if success, -1 if the file already exists, -2 in case of error.
  */
-int createFile(char *fileName)     //ARREGLAR: PUEDE HABER POSICIONES LIBRES POR EL MEDIO DEL IMAP
+
+int createFile(char *fileName) 
 {
 	/* Check NF2 */
 	if(strlen(fileName) > NAME_MAX){
 		printf("File name too long. The maximum length for a file name is 32 characters\n");
 		return -2;
 	}
-	// #include <sys/stat.h> !!!!!
-	struct stat st;
-	stat(fileName, &st);
-	/* Check NF3 */
-	if(st.st_size > MAX_SIZE_FILE){
-		printf("File too large. The maximum size for a file is 1 MiB\n");
+	/*
+	off_t size = 0;
+	if((size = lseek(openFile(fileName),0,SEEK_END)) < 0){
+		printf("Could not move the pointer inside the file\n");
 		return -2;
 	}
+	if(size > MAX_SIZE_FILE){
+		printf("File size too long. The maximum length for a file name is 32 characters\n");
+		printf("Size: %d\n", (int)size);
+		return -2;
+	}
+	*/
+
+	/*
+	struct stat st;
+	stat(fileName, &st);
+	// Check NF3 
+	if(st.st_size > MAX_SIZE_FILE){
+		printf("File too large. The maximum size for a file is 1 MiB\n");
+		printf("Size: %d\n", (int)st.st_size);
+		return -2;
+	}
+	*/
 	int i = 0;
-	while(inode[i].name != NULL){
+	while(strcmp(inode[i].name, "") != 0){
 		if(fileName == inode[i].name){  //OJO CUIDADO strcmp() !!!!!!!
 			printf("File already exists\n");
 			return -1;
@@ -214,18 +231,31 @@ int createFile(char *fileName)     //ARREGLAR: PUEDE HABER POSICIONES LIBRES POR
 		return -2;
 	}
 	*/
-	
-	//#include <stdio.h> !!!!!!!!!!
 	strcpy(inode[position].name, fileName);
-	inode[position].size = st.st_size;
+	/* inode[position].size = st.st_size; */
+	//inode[position].size = (int)size;
+	inode[position].size = 0;
 	int j = 0;
-	while(b_map[j] == 0){
+	while(b_map[j] == 1){
 		j++;
 	}
+	//mirar si el bitmap de bloques está lleno
+	i = 0;
+	int positionB = 0;
+	while(b_map[i] == 1 && i < INODE_MAX_NUMBER){
+		i++;
+	}
+	if(b_map[i] == 1){
+		printf("Maximum number of files reached (40)\n");
+		return -2;
+	}
+	if(i_map[i] == 0 && i == position){
+		positionB = i;
+	} /* free */
 	/* Set the position of the new file as full in the bmap */
-	b_map[position] = 1;
+	b_map[positionB] = 1;
 	inode[position].directBlock = j;
-	//inode[position].padding = SIZE_OF_BLOCK - (8*4);  // unisgned int 2 or 4 bytes????? meterle mierda a pincho hasta que ocupe todo (0)
+	//inode[position].padding = SIZE_OF_BLOCK - (32+(4*2);  // unisgned int 2 or 4 bytes????? meterle mierda a pincho hasta que ocupe todo (0) //poner las constantes !!!!!!!!!!!
 
 	/* Set the position of the new file as full in the imap */
 	i_map[position] = 1;
@@ -251,6 +281,7 @@ int removeFile(char *fileName)													//DEBERIAMOS TAMBIEN CERRAR EL FILE??
 
 			/* Set the position of the new file as free in the imap */
 			i_map[i] = 0;
+			//bitmap de bloques a 0 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			printf("File %s deleted\n", fileName);
 			return 0;
 		}
@@ -281,8 +312,6 @@ int openFile(char *fileName)
 				printf("Error opening file: %s\n", fileName);
 				return -2;
 			}
-			//#include <unistd.h>  !!!!!!!!!!!
-			//#include <sys/types.h>   !!!!!!!!!!!
 			if(lseek(fileDes, 0, SEEK_SET) < 0){
 				printf("Error moving the pointer of file: %s\n", fileName);
 				return -2;
@@ -302,7 +331,6 @@ int openFile(char *fileName)
  */
 int closeFile(int fileDescriptor)
 {
-	//#include <unistd.h>   !!!!!!!
 	//MIRAR PDF
 	if(close(fileDescriptor) < 0){
 		printf("Error closing the file\n");
@@ -422,6 +450,7 @@ int umount (void){
 	/* flush metadata on disk */
 	if( syncFS() < 0){ /* check errors in sync */
 		printf("Error in sync\n");
+		return -1;
 	}
 	return 0;
 }
@@ -516,4 +545,19 @@ int needed_blocks(int amount, char type){
 	}
 	printf("Blocks needed to store %d bits/bytes is: %d\n", amount, aux);
 	return aux;
+}
+
+void printInode(inode_t inode){
+	if(printf("File name: %s\n", inode.name) < 0){
+        printf("Could not print Magic number");
+    }
+    if(printf("File size in bytes: %d\n", inode.size) < 0){
+        printf("Could not print the File size");
+    }
+    if(printf("Direct block number: %d\n", inode.directBlock) < 0){
+        printf("Could not print Direct block number");
+    }
+    if(printf("Padding: %s\n", inode.padding) < 0){
+        printf("Could not print the padding");
+    }
 }
