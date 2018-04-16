@@ -166,7 +166,6 @@ int unmountFS(void)
  * @param fileName: name of the file to be created.
  * @return	0 if success, -1 if the file already exists, -2 in case of error.
  */
-
 int createFile(char *fileName) 
 {
 	/* Check NF2 */
@@ -205,36 +204,27 @@ int createFile(char *fileName)
 		}
 		i++;
 	}
-	int position = 0;
-    i = 0;
-	while(i_map[i] == 1 && i < INODE_MAX_NUMBER){
-		i++;
-	}
-	if(i_map[i] == 1){
-		printf("Maximum number of files reached (40)\n");
-		return -2;
-	}
-	if(i_map[i] == 0){
-		position = i;
-	} /* free */
-
-    /*
-	OTHER OLDER APPROACH
-	for(int i = 0; i < INODE_MAX_NUMBER; i++){ // inode bitmap 
-		if(i_map[i] == 0){
-			position = 1;
-		} // free
-	}
-	// Check NF1 
-	if(position == 0){
-		printf("Maximum number of files reached (40)\n");
-		return -2;
-	}
-	*/
+	int position = ialloc(); /* get the position of a free inode */
+    if(position < 0) {return -1;} /* error while ialloc */
+	int bPos = alloc(); /* get the position of a free data block */
+	inode[position].directBlock = bPos;
 	strcpy(inode[position].name, fileName);
-	/* inode[position].size = st.st_size; */
+	/*
+    OTHER OLDER APPROACH
+    for(int i = 0; i < INODE_MAX_NUMBER; i++){ // inode bitmap
+        if(i_map[i] == 0){
+            position = 1;
+        } // free
+    }
+    // Check NF1
+    if(position == 0){
+        printf("Maximum number of files reached (40)\n");
+        return -2;
+    }
+
+	inode[position].size = st.st_size;
 	//inode[position].size = (int)size;
-	inode[position].size = 0;
+	//inode[position].size = 0;
 	int j = 0;
 	while(b_map[j] == 1){
 		j++;
@@ -251,14 +241,16 @@ int createFile(char *fileName)
 	}
 	if(i_map[i] == 0 && i == position){
 		positionB = i;
-	} /* free */
-	/* Set the position of the new file as full in the bmap */
-	b_map[positionB] = 1;
+	}
+	 // free
+	// Set the position of the new file as full in the bmap
+	//b_map[positionB] = 1;
 	inode[position].directBlock = j;
 	//inode[position].padding = SIZE_OF_BLOCK - (32+(4*2);  // unisgned int 2 or 4 bytes????? meterle mierda a pincho hasta que ocupe todo (0) //poner las constantes !!!!!!!!!!!
 
-	/* Set the position of the new file as full in the imap */
-	i_map[position] = 1;
+	// Set the position of the new file as full in the imap
+	//i_map[position] = 1;
+	 */
 	return 0;
 }
 
@@ -543,8 +535,41 @@ int needed_blocks(int amount, char type){
 		printf("Wrong input type.\n bits: 'b'\n Bytes: 'B'\n");
 		return -1;
 	}
-	printf("Blocks needed to store %d bits/bytes is: %d\n", amount, aux);
 	return aux;
+}
+
+/**
+ * Searches for a free position in the inode map
+ *
+ * @return 	the position of the free inode. In case of error -1 is returned
+ */
+int ialloc(void){
+    for(int i = 0; i < sb.numInodes; i++){
+        if(i_map[i] == 0){ /* check if the position is free */
+            i_map[i] = 1; /* inode busy */
+            memset(&(inode[i]), 0, sizeof(inode_t) ); /* default values to the inode */
+            return i; /* return the position of the inode */
+        }
+    }
+    return -1;
+}
+
+/**
+ * Searches for a free position in the block map
+ *
+ * @return 	the position of the free block. In case of error -1 is returned
+ */
+int alloc(void){
+    char b[BLOCK_SIZE];
+    for(int i = 0; i < sb.dataBlockNum; i++){
+        if(b_map[i] == 0){ /* check if the position is free */
+            b_map[i] = 1; /* block busy */
+            memset(b, 0, BLOCK_SIZE); /* default values to the block */
+            bwrite(DEVICE_IMAGE, i + sb.firstDataBlock, b); /* write the empty block in the position found */
+            return i; /* return the position of the block */
+        }
+    }
+    return -1;
 }
 
 void printInode(inode_t inode){

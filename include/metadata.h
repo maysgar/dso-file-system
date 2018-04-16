@@ -53,4 +53,5 @@ int syncFS(void); /* writes the metadata into the disk */
 
 int needed_blocks(int bits, char type);
 void printInode(inode_t inode);
-
+int ialloc (void);
+int alloc (void);
