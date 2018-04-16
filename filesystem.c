@@ -251,6 +251,8 @@ int createFile(char *fileName)
 	// Set the position of the new file as full in the imap
 	//i_map[position] = 1;
 	 */
+	strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2))));
+
 	return 0;
 }
 
