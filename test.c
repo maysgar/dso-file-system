@@ -35,6 +35,8 @@ int test_unmountFS();
 int checkUnmountFS();
 
 int testOutput(int ret, char * msg);
+int checkCreateFile();
+
 
 
 /**
@@ -51,6 +53,40 @@ int test_mkFS(){
     if(testOutput(checkSyncFS(), "syncFS") < 0) {return -1;}
 
     printf("\n");
+	return 0;
+}
+
+int test_createFile(){
+	/* Normal execution of createFile */
+	if(testOutput(createFile("test.txt"), "createFile") < 0) {return -1;}
+	/* Check the correct assigned values of the superblock in the FS */
+    if(testOutput(checkCreateFile(), "checkCreateFile") < 0) {return -1;}
+
+    printf("\n");
+	return 0;
+}
+
+/**
+ * Checks the correct creation of files inside "disk.data"
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkCreateFile(){
+	if(strcmp(inode[0].name, "") == 0){
+		return -1;
+	}
+	if(inode[0].size == 0){ /* check number of blocks for the inode map */
+		return -1;
+	}
+	if(inode[0].directBlock != 44){ /* check number of blocks for the data map */
+		return -1;
+	}
+	/*
+	if(inode[0].padding == ){ // check number of inodes 
+		return -1;
+	}
+	*/
+	
 	return 0;
 }
 
