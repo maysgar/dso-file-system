@@ -139,7 +139,7 @@ int unmountFS(void)
 	for(int i = 0; i < sb.numInodes; i++){ /* block bitmap */
 		memset(&(inode[i]), 0, sizeof(inode_t));
 	}
-    return -1;
+    return 0;
 }
 
 /*

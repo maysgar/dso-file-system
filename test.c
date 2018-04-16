@@ -21,10 +21,21 @@
 #define N_BLOCKS	25						// Number of blocks in the device
 #define DEV_SIZE 	N_BLOCKS * BLOCK_SIZE	// Device size, in bytes
 
+/* mkFS tests */
+int test_mkFS();
 int checkMakeFS();
 int checkSyncFS();
-int testOutput(int ret, char * msg);
 int cmpDisk (int startPoint, int blocks, char * structToComp);
+
+/* mountFS tests */
+int test_mountFS();
+
+/* unmountFS tests */
+int test_unmountFS();
+int checkUnmountFS();
+
+int testOutput(int ret, char * msg);
+
 
 /**
  * Test all the funtionalities of the method mkFS
@@ -125,6 +136,54 @@ int cmpDisk (int startPoint, int blocks, char * structToComp){
 }
 
 /**
+ * Test all the funtionalities of the method mountFS
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int test_mountFS(){
+	/* Normal execution of mountFS */
+	if(testOutput(mountFS(), "mountFS") < 0) {return -1;}
+
+	/* Check the correct writing of the disk into the superblock */
+	if(testOutput(checkSyncFS(), "syncFS") < 0) {return -1;} /* we reuse the same test */
+
+	printf("\n");
+	return 0;
+}
+
+/**
+ * Test all the funtionalities of the method unmountFS
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int test_unmountFS(){
+	/* Normal execution of unmountFS */
+	if(testOutput(unmountFS(), "unmountFS") < 0) {return -1;}
+
+	/* Normal execution of unmountFS */
+	if(testOutput(checkUnmountFS(), "checkUnmountFS") < 0) {return -1;}
+
+	printf("\n");
+	return 0;
+}
+
+/**
+ * Checks that the file system has been correctly unmount from the simulated device
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkUnmountFS(){
+	/* check if the inode map is empty */
+	if(strcmp(i_map, "") != 0){ return -1;}
+
+	/* check if the inode map is empty */
+	if(strcmp(b_map, "") != 0){ return -1;}
+
+
+	return 0;
+}
+
+/**
  * Print the output message of a test method
  *
  * @param ret: the return value of the method executed
@@ -144,18 +203,15 @@ int testOutput(int ret, char * msg){
 int main() {
 	int ret; /* return variable */
 
-	/*** test for make the File System ***/
+	/*** test for making the File System ***/
 	test_mkFS();
 
+	/*** test for mounting the File System ***/
+	test_mountFS();
 
-	ret = mountFS();
-	if(ret != 0) {
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST mountFS ", ANSI_COLOR_RED, "FAILED\n", ANSI_COLOR_RESET);
-		return -1;
-	}
-	fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST mountFS ", ANSI_COLOR_GREEN, "SUCCESS\n", ANSI_COLOR_RESET);
+	/*** test for unmounting the File System ***/
+	test_unmountFS();
 
-	///////
 
 	ret = createFile("test.txt");
 	if(ret != 0) {
