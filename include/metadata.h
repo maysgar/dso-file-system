@@ -13,9 +13,6 @@
 #define PADDING_INODE 999           /* Padding size for the inode */
 #define MAX_BLOCK_PER_FILE 512      /* Maximum number of blocks per file */
 
-#define BITMAP_INODES 40            /* size of the bitmap of inodes (in bits) */
-#define BITMAP_BLOCK 512 * 40       /* size of the bitmap of blocks (in bits) */
-
 /* Variables used in mkFS for validating the size of the device */
 #define MIN_FILE_SYSTEM_SIZE 50 * 1024    /* Minimum file system size */
 #define MAX_FILE_SYSTEM_SIZE 10 * 1024 * 1024 /* Maximum file system size */
@@ -53,8 +50,6 @@ char * b_map;                         /* block map */
 void printSuperBlock(superblock_t superBlock);
 int umount (void); /* write the default File System into the disk */
 int syncFS(void); /* writes the metadata into the disk */
-// int indirect_block[SIZE_OF_BLOCK/POINTER_BYTES]; /*Indirect Block*/ Gabolo me lo vas a explicar tu
-//DEFINE POINTER_BYTES
 
 int needed_blocks(int bits, char type);
 void printInode(inode_t inode);
