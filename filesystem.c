@@ -348,3 +348,30 @@ void printSuperBlock(superblock_t superBlock){
         printf("Could not print Padding field:");
     }
 }
+
+/**
+ * Gives you the needed blocks to store the input bits or bytes
+ * 
+ * @return -1 in case of error and the number of needed blocks otherwise
+ */
+int needed_blocks(int amount, char type){
+	int aux = 0;
+	if(type == 'b'){
+		aux = (amount/8)/SIZE_OF_BLOCK;
+		if(((amount/8)%SIZE_OF_BLOCK) != 0){
+			aux++;
+		}
+	}
+	else if(type == 'B'){
+		aux = amount/SIZE_OF_BLOCK;
+		if((amount%SIZE_OF_BLOCK) != 0){
+			aux++;
+		}
+	}
+	else{
+		printf("Wrong input type.\n bits: 'b'\n Bytes: 'B'\n");
+		return -1;
+	}
+	printf("Blocks needed to store %d bits/bytes is: %d\n", amount, aux);
+	return aux;
+}
