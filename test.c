@@ -52,16 +52,16 @@ int checkMakeFS(){
 	if(sb.magicNum != 1){ /* check magic number */
 		return -1;
 	}
-	if(sb.inodeMapNumBlocks != 1){ /* check number of blocks for the inode map */
+	if(sb.inodeMapNumBlocks != needed_blocks(sb.numInodes,'b')){ /* check number of blocks for the inode map */
 		return -1;
 	}
-	if(sb.dataMapNumBlock != ( BITMAP_BLOCK / 1024 )){ /* check number of blocks for the data map */
+	if(sb.dataMapNumBlock != needed_blocks(sb.dataBlockNum, 'b')){ /* check number of blocks for the data map */
 		return -1;
 	}
 	if(sb.numInodes != INODE_MAX_NUMBER){ /* check number of inodes */
 		return -1;
 	}
-	if(sb.dataBlockNum != ( DEV_SIZE / SIZE_OF_BLOCK )){ /* check the number of data blocks */
+	if(sb.dataBlockNum != needed_blocks(DEV_SIZE, 'B')){ /* check the number of data blocks */
 		return -1;
 	}
 	if(sb.deviceSize != DEV_SIZE){ /* check the size of the File System */
@@ -86,17 +86,17 @@ int checkSyncFS(){
     if(cmpDisk(1, SIZE_OF_BLOCK, (char *) (&sb)) < 0){ return -1;}
 
     /* compare the inode map with the one at the disk */
-    for(int i = 0; i < sb.inodeMapNumBlocks; i++){
-    	if(cmpDisk(2 + i, SIZE_OF_BLOCK, i_map) < 0){ return -1;}
-    }
+    if(cmpDisk(2 , SIZE_OF_BLOCK * sb.inodeMapNumBlocks, i_map) < 0){ return -1;}
 
 	/* compare the block map with the one at the disk */
-	//for(int i = 0; i < sb.dataMapNumBlock; i++){
-		//printf("%d\n", i);
-		if(cmpDisk(2  + sb.inodeMapNumBlocks, SIZE_OF_BLOCK * sb.dataMapNumBlock , b_map) < 0){ return -1;}
-	//}
+	if(cmpDisk(2 + sb.inodeMapNumBlocks, SIZE_OF_BLOCK * sb.dataMapNumBlock , b_map) < 0){ return -1;}
 
-    return 0;
+	/* compare the inodes with the ones at the disk */
+	for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE) ; i++){
+		if(cmpDisk(i + sb.firstInode, SIZE_OF_BLOCK , (char*) (&inode[i])) < 0){ return -1;}
+	}
+
+	return 0;
 }
 
 /**

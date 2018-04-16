@@ -40,14 +40,14 @@ int mkFS(long deviceSize)
 
 	/* Superblock's magic number */
 	sb.magicNum = 1; /* por poner algo */
-	/* Number of blocks of the inode map */
-	sb.inodeMapNumBlocks = 1; /* as many bits as inodes */  /* aquí hay que llamar al método de isma */
+	/* Number of data blocks in the device */
+	sb.dataBlockNum = needed_blocks(deviceSizeInt, 'B'); /* The size of the device over the block size */
 	/* Number of blocks of the data map */
-	sb.dataMapNumBlock = (BITMAP_BLOCK / 1024); /* método mágico de isma */ /* as many as the maximum amount of files */
+	sb.dataMapNumBlock = needed_blocks(sb.dataBlockNum, 'b'); /* as many as the maximum amount of files */
 	/* Number of inodes in the device */
 	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
-	/* Number of data blocks in the device */
-	sb.dataBlockNum = deviceSizeInt / SIZE_OF_BLOCK; /* The size of the device over the block size */
+	/* Number of blocks of the inode map */
+	sb.inodeMapNumBlocks = needed_blocks(sb.numInodes,'b'); /* as many bits as inodes */
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
     /* Number of the first inode */
@@ -297,21 +297,21 @@ int syncFS (void){
 	}
     /* write inode map to disk */
 	for(int i = 0; i < sb.inodeMapNumBlocks; i++){
-        if( bwrite(DEVICE_IMAGE, 2+i, (char *) (i_map) + i*BLOCK_SIZE) < 0){
+        if( bwrite(DEVICE_IMAGE, 2+i, (char *) i_map + i*BLOCK_SIZE) < 0){
             printf("Error in bwrite (syncFS)\n");
             return -1;
         }
 	}
     /* write block map to disk */
     for(int i = 0; i < sb.dataMapNumBlock; i++){
-        if( bwrite(DEVICE_IMAGE, 2+i+sb.inodeMapNumBlocks, (char *) (&b_map + i*BLOCK_SIZE)) < 0){
+        if( bwrite(DEVICE_IMAGE, 2+i+sb.inodeMapNumBlocks, (char *) b_map + i*BLOCK_SIZE) < 0){
             printf("Error in bwrite (syncFS)\n");
             return -1;
         }
     }
 	/* write inodes to disk */
 	for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE) ; i++){
-		if( bwrite(DEVICE_IMAGE, i+sb.firstInode, (char *) (inode + i*BLOCK_SIZE)) < 0){
+		if( bwrite(DEVICE_IMAGE, i+sb.firstInode, (char *) inode + i*BLOCK_SIZE) < 0){
 			printf("Error in bwrite (syncFS)\n");
             return -1;
         }
@@ -372,6 +372,6 @@ int needed_blocks(int amount, char type){
 		printf("Wrong input type.\n bits: 'b'\n Bytes: 'B'\n");
 		return -1;
 	}
-	printf("Blocks needed to store %d bits/bytes is: %d\n", amount, aux);
+	//printf("Blocks needed to store %d bits/bytes is: %d\n", amount, aux);
 	return aux;
 }
