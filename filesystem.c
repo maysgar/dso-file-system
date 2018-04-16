@@ -572,6 +572,34 @@ int alloc(void){
     return -1;
 }
 
+/**
+ * Free a position of an inode
+ *
+ * @param inode_id : the position of the inode to be deleted
+ * @return -1 in case of error an 0 otherwise
+ */
+int ifree (int inode_id){
+	/* check the validity of the position of the inode */
+	if(inode_id > sb.numInodes) { return -1;}
+	/* free inode */
+	i_map[inode_id] = 0;
+	return 0;
+}
+
+/**
+ * Free a position of a block
+ *
+ * @param block_id : the position of the block to be deleted
+ * @return -1 in case of error an 0 otherwise
+ */
+int bfree (int block_id){
+	/* check the validity of the position of the block */
+	if(block_id > sb.dataBlockNum) { return -1;}
+	/* free block */
+	b_map[block_id] = 0;
+	return 0;
+}
+
 void printInode(inode_t inode){
 	if(printf("File name: %s\n", inode.name) < 0){
         printf("Could not print Magic number");

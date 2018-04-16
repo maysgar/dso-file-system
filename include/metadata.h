@@ -55,3 +55,5 @@ int needed_blocks(int bits, char type);
 void printInode(inode_t inode);
 int ialloc (void);
 int alloc (void);
+int ifree (int inode_id);
+int bfree (int block_id);
