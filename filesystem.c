@@ -22,7 +22,7 @@
 
 superblock_t sb; /* superblock */
 inode_t * inode; /* array of inodes */
-
+char buffer_block[BLOCK_SIZE];
 
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
@@ -38,6 +38,7 @@ inode_t * inode; /* array of inodes */
 int mkFS(long deviceSize)
 {
 	int deviceSizeInt = (int) (deviceSize); /* convert the size of the file to integer */
+	char block[BLOCK_SIZE];
 	/* check the validity of the size of the device */
 	if(deviceSizeInt < MIN_FILE_SYSTEM_SIZE || deviceSizeInt > MAX_FILE_SYSTEM_SIZE){
 		return -1;
@@ -55,10 +56,10 @@ int mkFS(long deviceSize)
 	sb.inodeMapNumBlocks = needed_blocks(sb.numInodes,'b'); /* as many bits as inodes */
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
-    /* Number of the first inode */
-    sb.firstInode = 2 + sb.inodeMapNumBlocks + sb.dataMapNumBlock; /* the first inode is after the data clock bitmap */
-    /* Number of the first data block */
-    sb.firstDataBlock = sb.firstInode + sb.numInodes; /* after the last inode */
+  /* Number of the first inode */
+  sb.firstInode = 2 + sb.inodeMapNumBlocks + sb.dataMapNumBlock; /* the first inode is after the data clock bitmap */
+  /* Number of the first data block */
+  sb.firstDataBlock = sb.firstInode + sb.numInodes; /* after the last inode */
 
 	/* memory for the inodes */
 	inode = malloc(sizeof(inode_t) * sb.numInodes);
@@ -85,6 +86,11 @@ int mkFS(long deviceSize)
 		printf("Error in umount\n");
 		return -1;
 	}
+
+	/* Write on disk the superblock */
+	memcpy(block,&sb, BLOCK_SIZE);
+	if(bwrite(NAME_DISK,0,block) == -1) return -4;
+
 	printSuperBlock(sb);
 	printInode(inode[0]);
 	return 0;
@@ -137,23 +143,24 @@ int mountFS(void)
  */
 int unmountFS(void)
 {
-	/*
-	free(inode);
-	free(i_map);
-	free(b_map);
-	return 0;
-	*/
-    // free function does not have a return value 
+	int i = 0;
 
 	/* delete inode map */
-    memset(&(i_map), 0, sb.inodeMapNumBlocks);
+  memset(&(i_map), 0, sb.inodeMapNumBlocks);
+	while(i_map[i] == 0) i++;
+	if(i_map[i] == 1) return -1; /* Not emptied correctly */
+
 	/* delete block map */
 	memset(&(b_map), 0, sb.dataMapNumBlock);
+	while(b_map[i] == 0) i++;
+	if(b_map[i] == 1) return -1; /* Not emptied correctly */
+
 	/* Free the inodes */
-	for(int i = 0; i < sb.numInodes; i++){ /* block bitmap */
-		memset(&(inode[i]), 0, sizeof(inode_t));
-	}
-    return 0;
+	for(int i = 0; i < sb.numInodes; i++) memset(&(inode[i]), 0, sizeof(inode_t));
+
+	//BWRITE
+
+	return 0;
 }
 
 /*
@@ -166,92 +173,36 @@ int unmountFS(void)
  * @param fileName: name of the file to be created.
  * @return	0 if success, -1 if the file already exists, -2 in case of error.
  */
-int createFile(char *fileName) 
+int createFile(char *fileName)
 {
+	int i = 0;
+	int position = ialloc(); 				/* get the position of a free inode */
+	int bPos = alloc(); 						/* get the position of a free data block */
+
 	/* Check NF2 */
 	if(strlen(fileName) > NAME_MAX){
 		printf("File name too long. The maximum length for a file name is 32 characters\n");
 		return -2;
 	}
-	/*
-	off_t size = 0;
-	if((size = lseek(openFile(fileName),0,SEEK_END)) < 0){
-		printf("Could not move the pointer inside the file\n");
-		return -2;
-	}
-	if(size > MAX_SIZE_FILE){
-		printf("File size too long. The maximum length for a file name is 32 characters\n");
-		printf("Size: %d\n", (int)size);
-		return -2;
-	}
-	*/
 
-	/*
-	struct stat st;
-	stat(fileName, &st);
-	// Check NF3 
-	if(st.st_size > MAX_SIZE_FILE){
-		printf("File too large. The maximum size for a file is 1 MiB\n");
-		printf("Size: %d\n", (int)st.st_size);
-		return -2;
-	}
-	*/
-	int i = 0;
-	while(strcmp(inode[i].name, "") != 0){
-		if(fileName == inode[i].name){  //OJO CUIDADO strcmp() !!!!!!!
+	/* File already exists */
+	for(int i = 0; i < sb.numInodes; i++){
+		if(strcmp(fileName,inode[i].name) == 0){
 			printf("File already exists\n");
 			return -1;
 		}
-		i++;
 	}
-	int position = ialloc(); /* get the position of a free inode */
-    if(position < 0) {return -1;} /* error while ialloc */
-	int bPos = alloc(); /* get the position of a free data block */
-	inode[position].directBlock = bPos;
-	strcpy(inode[position].name, fileName);
-	/*
-    OTHER OLDER APPROACH
-    for(int i = 0; i < INODE_MAX_NUMBER; i++){ // inode bitmap
-        if(i_map[i] == 0){
-            position = 1;
-        } // free
-    }
-    // Check NF1
-    if(position == 0){
-        printf("Maximum number of files reached (40)\n");
-        return -2;
-    }
 
-	inode[position].size = st.st_size;
-	//inode[position].size = (int)size;
-	//inode[position].size = 0;
-	int j = 0;
-	while(b_map[j] == 1){
-		j++;
-	}
-	//mirar si el bitmap de bloques está lleno
-	i = 0;
-	int positionB = 0;
-	while(b_map[i] == 1 && i < INODE_MAX_NUMBER){
-		i++;
-	}
-	if(b_map[i] == 1){
-		printf("Maximum number of files reached (40)\n");
-		return -2;
-	}
-	if(i_map[i] == 0 && i == position){
-		positionB = i;
-	}
-	 // free
-	// Set the position of the new file as full in the bmap
-	//b_map[positionB] = 1;
-	inode[position].directBlock = j;
-	//inode[position].padding = SIZE_OF_BLOCK - (32+(4*2);  // unisgned int 2 or 4 bytes????? meterle mierda a pincho hasta que ocupe todo (0) //poner las constantes !!!!!!!!!!!
+	if(position < 0 || bPos < 0) return -1; 		/* error while ialloc */
 
-	// Set the position of the new file as full in the imap
-	//i_map[position] = 1;
-	 */
-	strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2))));
+	i_map[position] = 1; 												/* Position in i_bit_map is now occupied */
+	strcpy(inode[i].name,fileName); 						/* file name */
+	inode[i].size = 0;													/* Size set to 0 as file is initially empty */
+	inode[position].directBlock = bPos;					/* Set direct block to be pointed */
+	strcpy(inode[position].padding, (char *)malloc(BLOCK_SIZE - (NAME_MAX+(sizeof(int)*2))));
+
+	/* Write on disk the inode created */
+	if(bwrite(NAME_DISK,sb.firstInode,buffer_block) == -1) return -3;
 
 	return 0;
 }
@@ -261,29 +212,20 @@ int createFile(char *fileName)
  * @param fileName: name of the file to be removed.
  * @return	0 if success, -1 if the file does not exist, -2 in case of error..
  */
-int removeFile(char *fileName)													//DEBERIAMOS TAMBIEN CERRAR EL FILE?? closeFile(fileDes);
+int removeFile(char *fileName)
 {
 	for(int i = 0; i < sb.numInodes; i++){
-		if(fileName == inode[i].name){   ///OJO CUIDADO STRSCMP()
-			//inode[i].name = "/0";		 //????
-			strcpy(inode[i].name, "/0");        //MIRAR MEMSET()
-			//strcpy(inode[i].name, "");        //otra opcion
-			inode[i].size = 0;           //????
-			inode[i].directBlock = 0;    //????
-			//inode[i].padding = "/0";     //????
-			strcpy(inode[i].padding, "/0");
-
-			/* Set the position of the new file as free in the imap */
-			i_map[i] = 0;
-			//bitmap de bloques a 0 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			printf("File %s deleted\n", fileName);
+		/* File does not exist */
+		if(strcmp(inode[i].name,fileName) == -1){
+			return -1;
+		}
+		else{ 															/* File Exists */
+			i_map[position] = 0;							/* Free Bitmap */
+			free(inode[i]);										/* Free inode */
 			return 0;
 		}
 	}
-	printf("File %s does not exist\n", fileName);
-	return -1;
-	//printf("Error\n");  
-	//return -2;                        //Don't know when to return this
+	return -2;
 }
 
 /*
@@ -297,25 +239,23 @@ int removeFile(char *fileName)													//DEBERIAMOS TAMBIEN CERRAR EL FILE??
  */
 int openFile(char *fileName)
 {
-	//CRC MIRAR TEMITA INTEGRITY
-	int fileDes = 0;
 	for(int i = 0; i < sb.numInodes; i++){
-		if(fileName == inode[i].name){
-			//#include <fcntl.h> !!!!!!!!!!
-			if((fileDes = open(fileName, O_RDWR)) < 0){   //PELEAS MUY MUY FUERTES CON EL PATH  /filesystem/fileName
-				printf("Error opening file: %s\n", fileName);
-				return -2;
-			}
-			if(lseek(fileDes, 0, SEEK_SET) < 0){
+		/* If the file name is the same as the one in the inode and the entry of
+		that inode in the bitmap is not empty then the file is ready to be openned */
+		if((strcmp(fileName,inode[i].name) == 0) && i_map[i] == 1){
+			/* Errors... */
+			if(lseek(i, 0, SEEK_SET) < 0){
 				printf("Error moving the pointer of file: %s\n", fileName);
 				return -2;
 			}
-			printf("File %s successfully opened\n", fileName);
-			return fileDes;
+			return i; //i is the file descriptor
 		}
 	}
 	printf("File %s does not exist\n", fileName);
 	return -1;
+
+	//CRC MIRAR TEMITA INTEGRITY
+	//#include <fcntl.h> !!!!!!!!!!
 }
 
 /*
@@ -325,13 +265,13 @@ int openFile(char *fileName)
  */
 int closeFile(int fileDescriptor)
 {
-	//MIRAR PDF
-	if(close(fileDescriptor) < 0){
-		printf("Error closing the file\n");
-		return -1;
+	for(int i = 0; i < sb.numInodes; i++){
+		/* If the fd is out of bounds, not in the inode list... */
+		if(fileDescriptor < 0 || fileDescriptor > sb.numInodes) return -1;
+		if(fileDescriptor == i){
+
+		}
 	}
-	printf("File closed successfully\n");
-	return 0;
 }
 
 /*
@@ -516,20 +456,20 @@ void printSuperBlock(superblock_t superBlock){
 
 /**
  * Gives you the needed blocks to store the input bits or bytes
- * 
+ *
  * @return -1 in case of error and the number of needed blocks otherwise
  */
 int needed_blocks(int amount, char type){
 	int aux = 0;
 	if(type == 'b'){
-		aux = (amount/8)/SIZE_OF_BLOCK;
-		if(((amount/8)%SIZE_OF_BLOCK) != 0){
+		aux = (amount/8)/BLOCK_SIZE;
+		if(((amount/8)%BLOCK_SIZE) != 0){
 			aux++;
 		}
 	}
 	else if(type == 'B'){
-		aux = amount/SIZE_OF_BLOCK;
-		if((amount%SIZE_OF_BLOCK) != 0){
+		aux = amount/BLOCK_SIZE;
+		if((amount%BLOCK_SIZE) != 0){
 			aux++;
 		}
 	}

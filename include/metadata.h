@@ -5,13 +5,13 @@
  * @brief 	Definition of the structures and data types of the file system.
  * @date	01/03/2017
  */
-#define SIZE_OF_BLOCK 1024 * 2      /* The file system block size will be 2048 bytes */
 #define INODE_MAX_NUMBER 40         /* Maximum number of i-nodes in the device */
 #define MAX_SIZE_FILE 1024 * 1024   /* Maximum file size in bytes */
 #define NAME_MAX 32                 /* NF2 The maximum length of the file name will be 32 characters */
 #define PADDING_SUPERBLOCK 999      /* Padding size for the superblock */
 #define PADDING_INODE 999           /* Padding size for the inode */
 #define MAX_BLOCK_PER_FILE 512      /* Maximum number of blocks per file */
+#define NAME_DISK "disk.dat"        /* Device name for bwrite operations */
 
 /* Variables used in mkFS for validating the size of the device */
 #define MIN_FILE_SYSTEM_SIZE 50 * 1024    /* Minimum file system size */
