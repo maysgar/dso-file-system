@@ -212,20 +212,29 @@ int createFile(char *fileName)
  * @param fileName: name of the file to be removed.
  * @return	0 if success, -1 if the file does not exist, -2 in case of error..
  */
-int removeFile(char *fileName)
-{
-	for(int i = 0; i < sb.numInodes; i++){
-		/* File does not exist */
-		if(strcmp(inode[i].name,fileName) == -1){
-			return -1;
-		}
-		else{ 															/* File Exists */
-			i_map[position] = 0;							/* Free Bitmap */
-			free(inode[i]);										/* Free inode */
+int removeFile(char *fileName){     //DEBERIAMOS TAMBIEN CERRAR EL FILE?? closeFile(fileDes);
+	/* Check NF2 */
+	if(strlen(fileName) > NAME_MAX){
+		printf("File name too long. The maximum length for a file name is 32 characters\n");
+		return -2;
+	}
+
+	int i = 0;
+	while(strcmp(inode[i].name, "") != 0){
+		if(fileName == inode[i].name){  //OJO CUIDADO strcmp() !!!!!!!
+			strcpy(inode[i].name, "");        //MIRAR MEMSET()
+			inode[i].size = 0;
+			inode[i].directBlock = 0;
+			//inode[i].padding = "/0";     //????
+			i_map[i] = 0;
+			//free(inode[i]); no va maquina
+			printf("File %s deleted\n", fileName);
 			return 0;
 		}
+		i++;
 	}
-	return -2;
+	printf("File %s does not exist\n", fileName);
+	return -1;
 }
 
 /*
@@ -272,6 +281,7 @@ int closeFile(int fileDescriptor)
 
 		}
 	}
+	return 0;
 }
 
 /*
@@ -542,6 +552,10 @@ int bfree (int block_id){
 	return 0;
 }
 
+/**
+ * Prints all the data from an inode
+ * 
+ */
 void printInode(inode_t inode){
 	if(printf("File name: %s\n", inode.name) < 0){
         printf("Could not print Magic number");
@@ -555,4 +569,14 @@ void printInode(inode_t inode){
     if(printf("Padding: %s\n", inode.padding) < 0){
         printf("Could not print the padding");
     }
+}
+
+int getInodePosition(char *fname){
+	for(int i = 0; i < sb.numInodes; i++){
+		if(strcmp(inode[i].name, fname) == 0){
+			return i;
+		}
+	}
+	printf("Could not find the file\n");
+	return -1;
 }

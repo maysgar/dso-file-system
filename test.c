@@ -35,8 +35,14 @@ int test_unmountFS();
 int checkUnmountFS();
 
 int testOutput(int ret, char * msg);
+
+/* createFile tests */
+int test_createFile();
 int checkCreateFile();
 
+/* removeFile tests */
+int test_removeFile();
+int checkRemoveFile();
 
 
 /**
@@ -66,6 +72,13 @@ int test_createFile(){
 	return 0;
 }
 
+int test_removeFile(){
+	/* Normal execution of removeFile */
+	if(testOutput(removeFile("test.txt"), "removeFile") < 0) {return -1;}
+	/* Check the correct assigned values of the superblock in the FS */
+    if(testOutput(checkRemoveFile(), "checkRemoveFile") < 0) {return -1;}
+}
+
 /**
  * Checks the correct creation of files inside "disk.data"
  *
@@ -83,6 +96,31 @@ int checkCreateFile(){
 	}
 	/*
 	if(inode[0].padding == ){ // check number of inodes 
+		return -1;
+	}
+	*/
+	
+	return 0;
+}
+
+
+/**
+ * Checks the correct creation of files inside "disk.data"
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkRemoveFile(){
+	if(strcmp(inode[0].name, "") != 0){
+		return -1;
+	}
+	if(inode[0].size != 0){ /* check number of blocks for the inode map */
+		return -1;
+	}
+	if(inode[0].directBlock == 44){ /* check number of blocks for the data map */
+		return -1;
+	}
+	/*
+	if(inode[0].padding != ){ // check number of inodes 
 		return -1;
 	}
 	*/
@@ -251,8 +289,12 @@ int main() {
 	/*** test for unmounting the File System ***/
 	test_unmountFS();
 
+	/*** test for creating a file ***/
+	test_createFile();
 
-	ret = createFile("test.txt");
+	/*** test for removing a file ***/
+	test_removeFile();
+
 	if(ret != 0) {
 		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST createFile ", ANSI_COLOR_RED, "FAILED\n", ANSI_COLOR_RESET);
 		return -1;
