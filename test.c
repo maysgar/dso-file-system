@@ -152,7 +152,7 @@ int checkMakeFS(){
 	if(sb.firstInode != ( 2  )){ /* check the correct position of the first inode */
 		return -1;
 	}
-	if(sb.firstDataBlock != ( sb.firstInode + sb.numInodes )){ /* check the correct position of the first data block */
+	if(sb.firstDataBlock != ( sb.firstInode + sb.inodesBlocks )){ /* check the correct position of the first data block */
 		return -1;
 	}
 	return 0;
