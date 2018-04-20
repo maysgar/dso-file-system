@@ -209,6 +209,7 @@ int createFile(char *fileName)
 	int bPos = alloc(); /* get the position of a free data block */
 	inode[position].directBlock = bPos;
 	strcpy(inode[position].name, fileName);
+	inode[position].size = 0;
 	/*
     OTHER OLDER APPROACH
     for(int i = 0; i < INODE_MAX_NUMBER; i++){ // inode bitmap
@@ -263,27 +264,28 @@ int createFile(char *fileName)
  */
 int removeFile(char *fileName)													//DEBERIAMOS TAMBIEN CERRAR EL FILE?? closeFile(fileDes);
 {
-	for(int i = 0; i < sb.numInodes; i++){
-		if(fileName == inode[i].name){   ///OJO CUIDADO STRSCMP()
-			//inode[i].name = "/0";		 //????
-			strcpy(inode[i].name, "/0");        //MIRAR MEMSET()
-			//strcpy(inode[i].name, "");        //otra opcion
-			inode[i].size = 0;           //????
-			inode[i].directBlock = 0;    //????
-			//inode[i].padding = "/0";     //????
-			strcpy(inode[i].padding, "/0");
 
-			/* Set the position of the new file as free in the imap */
-			i_map[i] = 0;
-			//bitmap de bloques a 0 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			printf("File %s deleted\n", fileName);
+	/* Check NF2 */
+	if(strlen(fileName) > NAME_MAX){
+		printf("File name too long. The maximum length for a file name is 32 characters\n");
+		return -2;
+	}
+
+	for(int i = 0; i < sb.numInodes; i++){
+		if(strcmp(fileName,inode[i].name) == 0){   ///OJO CUIDADO STRSCMP()
+			strcpy(inode[i].name, "");        //MIRAR MEMSET()
+			inode[i].size = 0;  
+			inode[i].directBlock = 0;
+			strcpy(inode[i].padding, "");
+
+			/* Set the position of the new file as free in the imap and bmap*/
+			ifree(i);
+			bfree(i);
 			return 0;
 		}
 	}
 	printf("File %s does not exist\n", fileName);
 	return -1;
-	//printf("Error\n");  
-	//return -2;                        //Don't know when to return this
 }
 
 /*
@@ -616,3 +618,14 @@ void printInode(inode_t inode){
         printf("Could not print the padding");
     }
 }
+
+int getInodePosition(char *fname){
+	for(int i = 0; i < sb.numInodes; i++){
+		if(strcmp(inode[i].name, fname) == 0){
+			return i;
+		}
+	}
+	printf("Could not find the file\n");
+	return -1;
+}
+

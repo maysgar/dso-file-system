@@ -35,7 +35,14 @@ int test_unmountFS();
 int checkUnmountFS();
 
 int testOutput(int ret, char * msg);
+
+/* createFile tests */
+int test_createFile();
 int checkCreateFile();
+
+/* removeFile tests */
+int test_removeFile();
+int checkRemoveFile();
 
 
 
@@ -66,6 +73,16 @@ int test_createFile(){
 	return 0;
 }
 
+int test_removeFile(){
+	/* Normal execution of removeFile */
+	if(testOutput(removeFile("test.txt"), "removeFile") < 0) {return -1;}
+	/* Check the correct assigned values of the superblock in the FS */
+    if(testOutput(checkRemoveFile(), "checkRemoveFile") < 0) {return -1;}
+
+	printf("\n");
+	return 0;
+}
+
 /**
  * Checks the correct creation of files inside "disk.data"
  *
@@ -75,18 +92,42 @@ int checkCreateFile(){
 	if(strcmp(inode[0].name, "") == 0){
 		return -1;
 	}
-	if(inode[0].size == 0){ /* check number of blocks for the inode map */
+	if(inode[0].size != 0){ /* check number of blocks for the inode map */
 		return -1;
 	}
-	if(inode[0].directBlock != 44){ /* check number of blocks for the data map */
+	if(inode[0].directBlock != 0){ /* check number of blocks for the data map */
 		return -1;
 	}
-	/*
-	if(inode[0].padding == ){ // check number of inodes 
+	if(strcmp(inode[0].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2)))) != 0){ // check number of inodes 
 		return -1;
 	}
-	*/
-	
+	if(i_map[0] != 1){
+		return -1;
+	}
+	return 0;
+}	
+
+/**
+ * Checks the correct creation of files inside "disk.data"
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkRemoveFile(){
+	if(strcmp(inode[0].name, "") != 0){
+		return -1;
+	}
+	if(inode[0].size != 0){ /* check number of blocks for the inode map */
+		return -1;
+	}
+	if(inode[0].directBlock == 44){ /* check number of blocks for the data map */
+		return -1;
+	}
+	if(strcmp(inode[0].padding, "") != 0){ // check number of inodes 
+		return -1;
+	}
+	if(i_map[0] != 0){
+		return -1;
+	}
 	return 0;
 }
 
@@ -251,15 +292,11 @@ int main() {
 	/*** test for unmounting the File System ***/
 	test_unmountFS();
 
+	/*** test for creating a file ***/
+	test_createFile();
 
-	ret = createFile("test.txt");
-	if(ret != 0) {
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST createFile ", ANSI_COLOR_RED, "FAILED\n", ANSI_COLOR_RESET);
-		return -1;
-	}
-	fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST createFile ", ANSI_COLOR_GREEN, "SUCCESS\n", ANSI_COLOR_RESET);
-
-	///////
+	/*** test for removing a file ***/
+	test_removeFile();
 
 	ret = unmountFS();
 	if(ret != 0) {
