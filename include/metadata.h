@@ -58,3 +58,4 @@ int ialloc (void);
 int alloc (void);
 int ifree (int inode_id);
 int bfree (int block_id);
+int bmap(int inode_position, int offset);

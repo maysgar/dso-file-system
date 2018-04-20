@@ -196,6 +196,10 @@ int createFile(char *fileName)
 		return -2;
 	}
 	*/
+    if(getInodePosition(fileName) > 0){
+		return -1;
+	}
+	/*
 	int i = 0;
 	while(strcmp(inode[i].name, "") != 0){
 		if(fileName == inode[i].name){  //OJO CUIDADO strcmp() !!!!!!!
@@ -203,7 +207,7 @@ int createFile(char *fileName)
 			return -1;
 		}
 		i++;
-	}
+	}*/
 	int position = ialloc(); /* get the position of a free inode */
     if(position < 0) {return -1;} /* error while ialloc */
 	int bPos = alloc(); /* get the position of a free data block */
@@ -264,28 +268,28 @@ int createFile(char *fileName)
  */
 int removeFile(char *fileName)													//DEBERIAMOS TAMBIEN CERRAR EL FILE?? closeFile(fileDes);
 {
-
 	/* Check NF2 */
 	if(strlen(fileName) > NAME_MAX){
 		printf("File name too long. The maximum length for a file name is 32 characters\n");
 		return -2;
 	}
 
-	for(int i = 0; i < sb.numInodes; i++){
-		if(strcmp(fileName,inode[i].name) == 0){   ///OJO CUIDADO STRSCMP()
-			strcpy(inode[i].name, "");        //MIRAR MEMSET()
-			inode[i].size = 0;  
-			inode[i].directBlock = 0;
-			strcpy(inode[i].padding, "");
+	int position = getInodePosition(fileName);
+	if(position >= 0){
+		strcpy(inode[position].name, "");        //MIRAR MEMSET()
+		inode[position].size = 0;  
+		inode[position].directBlock = 0;
+		strcpy(inode[position].padding, "");
 
-			/* Set the position of the new file as free in the imap and bmap*/
-			ifree(i);
-			bfree(i);
-			return 0;
-		}
+		/* Set the position of the new file as free in the imap and bmap*/
+		ifree(position);
+		bfree(position);
+		return 0;
 	}
-	printf("File %s does not exist\n", fileName);
-	return -1;
+	else{
+		printf("File %s does not exist\n", fileName);
+		return -1;
+	}
 }
 
 /*
@@ -604,6 +608,12 @@ int bfree (int block_id){
 	return 0;
 }
 
+/**
+ * Print all the fields from an inode
+ *
+ * @param inode : the inode to extract the fields
+ * @return -1 in case of error an 0 otherwise
+ */
 void printInode(inode_t inode){
 	if(printf("File name: %s\n", inode.name) < 0){
         printf("Could not print Magic number");
@@ -619,13 +629,38 @@ void printInode(inode_t inode){
     }
 }
 
+/**
+ * Get the position of the given inode
+ *
+ * @param inode : the inode to extract the position
+ * @return -1 in case of error an the position of the inode otherwise
+ */
 int getInodePosition(char *fname){
 	for(int i = 0; i < sb.numInodes; i++){
 		if(strcmp(inode[i].name, fname) == 0){
+			/* Return file position */
 			return i;
 		}
 	}
-	printf("Could not find the file\n");
+	/* Could not find the file */
 	return -1;
 }
 
+/**
+ * Get the direct block from the inode in the given position
+ *
+ * @param inode_position : the position of the inode
+ * @return -1 in case of error an the direct block of the inode otherwise
+ */
+int bmap(int inode_position, int offset){
+	/* position is not valid */
+	if(inode_position > sb.numInodes){
+		return -1;
+	}
+
+	/* return the inode block */
+	if(offset < SIZE_OF_BLOCK){
+		return inode[inode_position].directBlock;
+	}
+	return -1;
+}
