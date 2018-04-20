@@ -518,13 +518,19 @@ void printInode(inode_t inode){
  * @return -1 in case of error an the position of the inode otherwise
  */
 int getInodePosition(char *fname){
-	for(int i = 0; i < sb.numInodes; i++){
-		if(strcmp(inode[i].name, fname) == 0){
-			/* Return file position */
-			return i;
+	int count = 0;
+	for(int i = 0; i < sb.inodesBlocks; i++){ /* go through all the inode blocks */
+		inode_block_t inodeListAux = inodeList[i]; /* copy the list of inodes of the current block */
+		for(int j = 0; j <= INODE_PER_BLOCK; j++){ /* go through all the inodes from a block */
+			if(count > INODE_MAX_NUMBER){ /* already checked all the inodes */
+				return -1;
+			}
+			else if(strcmp(inodeListAux.inodeArray[j].name, fname) == 0) {
+				/* Return file position */
+				return i;
+			}
 		}
 	}
-	/* Could not find the file */
 	return -1;
 }
 
