@@ -305,10 +305,9 @@ int openFile(char *fileName)
 {
 	//CRC MIRAR TEMITA INTEGRITY
 	int fileDes = 0;
-	for(int i = 0; i < sb.numInodes; i++){
-		if(fileName == inode[i].name){
-			//#include <fcntl.h> !!!!!!!!!!
-			if((fileDes = open(fileName, O_RDWR)) < 0){   //PELEAS MUY MUY FUERTES CON EL PATH  /filesystem/fileName
+	int position = getInodePosition(fileName);
+	if(position >= 0){
+		if((fileDes = open(fileName, O_RDWR)) < 0){   //PELEAS MUY MUY FUERTES CON EL PATH  /filesystem/fileName
 				printf("Error opening file: %s\n", fileName);
 				return -2;
 			}
@@ -318,10 +317,11 @@ int openFile(char *fileName)
 			}
 			printf("File %s successfully opened\n", fileName);
 			return fileDes;
-		}
 	}
-	printf("File %s does not exist\n", fileName);
-	return -1;
+	else{
+		printf("File %s does not exist\n", fileName);
+		return -1;
+	}
 }
 
 /*
