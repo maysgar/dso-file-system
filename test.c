@@ -99,12 +99,13 @@ int checkMakeFS(){
 	if(sb.magicNum != 1){ /* check magic number */
 		return -1;
 	}
-	if(sb.inodeMapNumBlocks != needed_blocks(sb.numInodes,'b')){ /* check number of blocks for the inode map */
+	/*
+	if(sb.inodeMapNumBlocks != needed_blocks(sb.numInodes,'b')){  check number of blocks for the inode map *
 		return -1;
-	}
-	if(sb.dataMapNumBlock != needed_blocks(sb.dataBlockNum, 'b')){ /* check number of blocks for the data map */
+	}*
+	if(sb.dataMapNumBlock != needed_blocks(sb.dataBlockNum, 'b')){ * check number of blocks for the data map *
 		return -1;
-	}
+	}*/
 	if(sb.numInodes != INODE_MAX_NUMBER){ /* check number of inodes */
 		return -1;
 	}
@@ -114,7 +115,7 @@ int checkMakeFS(){
 	if(sb.deviceSize != DEV_SIZE){ /* check the size of the File System */
 		return -1;
 	}
-	if(sb.firstInode != ( 2 + sb.inodeMapNumBlocks + sb.dataMapNumBlock )){ /* check the correct position of the first inode */
+	if(sb.firstInode != ( 2  )){ /* check the correct position of the first inode */
 		return -1;
 	}
 	if(sb.firstDataBlock != ( sb.firstInode + sb.numInodes )){ /* check the correct position of the first data block */
@@ -132,11 +133,12 @@ int checkSyncFS(){
     /* compare the superblock with the first block of the disk */
     if(cmpDisk(1, SIZE_OF_BLOCK, (char *) (&sb)) < 0){ return -1;}
 
-    /* compare the inode map with the one at the disk */
-    if(cmpDisk(2 , SIZE_OF_BLOCK * sb.inodeMapNumBlocks, i_map) < 0){ return -1;}
+    /* compare the inode map with the one at the disk *
+    if(cmpDisk(2 , SIZE_OF_BLOCK * sb.inodeMapNumBlocks, sb.i_map) < 0){ return -1;}
 
-	/* compare the block map with the one at the disk */
-	if(cmpDisk(2 + sb.inodeMapNumBlocks, SIZE_OF_BLOCK * sb.dataMapNumBlock , b_map) < 0){ return -1;}
+	* compare the block map with the one at the disk *
+	if(cmpDisk(2 + sb.inodeMapNumBlocks, SIZE_OF_BLOCK * sb.dataMapNumBlock , sb.b_map) < 0){ return -1;}
+	*/
 
 	/* compare the inodes with the ones at the disk */
 	for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE) ; i++){
@@ -210,10 +212,10 @@ int test_unmountFS(){
  */
 int checkUnmountFS(){
 	/* check if the inode map is empty */
-	if(strcmp(i_map, "") != 0){ return -1;}
+	if(strcmp(sb.i_map, "") != 0){ return -1;}
 
 	/* check if the inode map is empty */
-	if(strcmp(b_map, "") != 0){ return -1;}
+	if(strcmp(sb.b_map, "") != 0){ return -1;}
 
     /* check if the inodes are empty */
     for(int i = 0; i < sb.numInodes; i++) { /* block bitmap */
