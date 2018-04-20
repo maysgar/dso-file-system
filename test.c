@@ -98,9 +98,9 @@ int checkCreateFile(){
 	if(inode[0].directBlock != 0){ /* check number of blocks for the data map */
 		return -1;
 	}
-	if(strcmp(inode[0].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2)))) != 0){ // check number of inodes 
+	/*if(strcmp(inode[0].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2)))) != 0){ // check number of inodes     Cambiar padding
 		return -1;
-	}
+	}*/
 	if(sb.i_map[0] != 1){
 		return -1;
 	}
@@ -122,9 +122,9 @@ int checkRemoveFile(){
 	if(inode[0].directBlock == 44){ /* check number of blocks for the data map */
 		return -1;
 	}
-	if(strcmp(inode[0].padding, "") != 0){ // check number of inodes 
+	/*if(strcmp(inode[0].padding, "") != 0){ // check number of inodes     Cambiar padding
 		return -1;
-	}
+	}*/
 	if(sb.i_map[0] != 0){
 		return -1;
 	}

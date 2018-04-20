@@ -20,6 +20,9 @@
 #define MIN_FILE_SYSTEM_SIZE 50 * 1024    /* Minimum file system size */
 #define MAX_FILE_SYSTEM_SIZE 10 * 1024 * 1024 /* Maximum file system size */
 
+#define INODE_SIZE NAME_MAX + 8 /* Size of an inode in bytes */
+#define INODE_PER_BLOCK (int) ( (SIZE_OF_BLOCK) / (INODE_SIZE)) /* Amount of inodes which fit in a block */
+
 #define bitmap_getbit(bitmap_, i_) (bitmap_[i_ >> 3] & (1 << (i_ & 0x07)))
 static inline void bitmap_setbit(char *bitmap_, int i_, int val_) {
   if (val_)
@@ -29,24 +32,28 @@ static inline void bitmap_setbit(char *bitmap_, int i_, int val_) {
 }
 
 typedef struct{
-  unsigned int magicNum;              /* Magic number of the superblock */
-  unsigned int numInodes;             /* Number of i-nodes in the device */
-  unsigned int firstInode;            /* Number of the 1st i-node in the device */
-  unsigned int dataBlockNum;          /* Number of data blocks in the device */
-  unsigned int firstDataBlock;        /* Number of the 1st data block */
-  unsigned int deviceSize;            /* Total disk space in bytes */
-  char i_map [IMAP_SIZE];             /* inode map */
-  char b_map [BMAP_SIZE];             /* block map */
-  char padding[PADDING_SUPERBLOCK];   /* Padding field for fulfilling a block */
+    unsigned int magicNum;              /* Magic number of the superblock */
+    unsigned int numInodes;             /* Number of i-nodes in the device */
+    unsigned int firstInode;            /* Number of the 1st i-node in the device */
+    unsigned int dataBlockNum;          /* Number of data blocks in the device */
+    unsigned int firstDataBlock;        /* Number of the 1st data block */
+    unsigned int deviceSize;            /* Total disk space in bytes */
+    unsigned int inodesBlocks;          /* Number of blocks for the inodes */
+    char i_map [IMAP_SIZE];             /* inode map */
+    char b_map [BMAP_SIZE];             /* block map */
+    char padding[PADDING_SUPERBLOCK];   /* Padding field for fulfilling a block */
 } superblock_t;
 
 typedef struct{
-  char name[NAME_MAX];                /* file name */
-  unsigned int size;                  /* Current file size in Bytes */
-  unsigned int directBlock;           /* Direct block number */
-  char padding[PADDING_INODE];        /* Padding field for fulfilling a block */
+    char name[NAME_MAX];                /* file name */
+    unsigned int size;                  /* Current file size in Bytes */
+    unsigned int directBlock;           /* Direct block number */
 } inode_t;
 
+typedef struct{
+    inode_t inodeArray [INODE_PER_BLOCK]; /* Inode array */
+    char padding[PADDING_INODE];        /* Padding field for fulfilling a block */
+} inode_block_t;
 
 
 void printSuperBlock(superblock_t superBlock);

@@ -22,6 +22,7 @@
 
 superblock_t sb; /* superblock */
 inode_t * inode; /* array of inodes */
+inode_block_t * inodeList; /* Struct of inodes */
 
 
 /*
@@ -53,6 +54,13 @@ int mkFS(long deviceSize)
 	sb.deviceSize = deviceSizeInt;
     /* Number of the first inode */
     sb.firstInode = 2; /* the first inode is after the superblock */
+
+	/* calculate the number of inode_block_t that we need */
+	sb.inodesBlocks = (int) (INODE_MAX_NUMBER / INODE_PER_BLOCK);
+	if(((INODE_MAX_NUMBER % INODE_PER_BLOCK)) != 0){
+		sb.inodesBlocks++;
+	}
+
     /* Number of the first data block */
     sb.firstDataBlock = sb.firstInode + sb.numInodes; /* after the last inode */
 
@@ -158,7 +166,7 @@ int createFile(char *fileName)
 	inode[position].directBlock = bPos;
 	strcpy(inode[position].name, fileName);
 	inode[position].size = 0;
-	strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2))));
+	//strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2))));   Hay que cambiar el padding
 
 	return 0;
 }
@@ -181,7 +189,7 @@ int removeFile(char *fileName)
 		strcpy(inode[position].name, "");        //MIRAR MEMSET()
 		inode[position].size = 0;  
 		inode[position].directBlock = 0;
-		strcpy(inode[position].padding, "");
+		//strcpy(inode[position].padding, "");          Hay que cambiar el padding
 
 		bitmap_setbit(sb.i_map, position, 0);
 		/* Set the position of the new file as free in the imap and bmap*/
@@ -507,9 +515,6 @@ void printInode(inode_t inode){
     }
     if(printf("Direct block number: %d\n", inode.directBlock) < 0){
         printf("Could not print Direct block number");
-    }
-    if(printf("Padding: %s\n", inode.padding) < 0){
-        printf("Could not print the padding");
     }
 }
 
