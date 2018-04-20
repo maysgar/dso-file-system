@@ -67,6 +67,9 @@ int mkFS(long deviceSize)
 	/* memory for the inodes */
 	inode = malloc(sizeof(inode_t) * sb.numInodes);
 
+	/* memory for the list of inodes */
+	inodeList = malloc(sizeof(inode_block_t) * sb.inodesBlocks);
+
 	/* Setting as free all the bitmap positions */
 	for(int i = 0; i < sb.numInodes; i++){ /* inode bitmap */
 		bitmap_setbit(sb.i_map, i, 0); /* free */
@@ -103,9 +106,9 @@ int mountFS(void)
         printf("Error in bread (mountFS)\n");
         return -1;
     }
-    /* read inodes from disk */
-    for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE); i++){
-        if( bread(DEVICE_IMAGE, i+sb.firstInode, (char *) (inode) + i*BLOCK_SIZE) < 0){
+    /* read the inodeList from disk */
+    for(int i = 0; i < sb.inodesBlocks; i++){
+        if( bread(DEVICE_IMAGE, i+sb.firstInode, (char *) (&inodeList) + i*BLOCK_SIZE) < 0){
             printf("Error in bread (mountFS)\n");
             return -1;
         }
@@ -150,22 +153,12 @@ int createFile(char *fileName)
     if(getInodePosition(fileName) > 0){
 		return -1;
 	}
-	
-	/*
-	int i = 0;
-	while(strcmp(inode[i].name, "") != 0){
-		if(fileName == inode[i].name){  //OJO CUIDADO strcmp() !!!!!!!
-			printf("File already exists\n");
-			return -1;
-		}
-		i++;
-	}*/
 	int position = ialloc(); /* get the position of a free inode */
     if(position < 0) {return -1;} /* error while ialloc */
 	int bPos = alloc(); /* get the position of a free data block */
-	inode[position].directBlock = bPos;
-	strcpy(inode[position].name, fileName);
-	inode[position].size = 0;
+	inodeList -> inodeArray[position].directBlock = bPos;
+	strcpy(inodeList -> inodeArray[position].name, fileName);
+	inodeList -> inodeArray[position].size = 0;
 	//strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2))));   Hay que cambiar el padding
 
 	return 0;
@@ -378,9 +371,9 @@ int syncFS (void){
 	    printf("Error in bwrite (syncFS)\n");
         return -1;
 	}
-	/* write inodes to disk */
-	for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE) ; i++){
-		if( bwrite(DEVICE_IMAGE, i+sb.firstInode, (char *) inode + i*BLOCK_SIZE) < 0){
+	/* write the inode list to disk */
+	for(int i = 0; i < sb.inodesBlocks; i++){
+		if( bwrite(DEVICE_IMAGE, i+sb.firstInode, (char *) (&inodeList) + i*BLOCK_SIZE) < 0){
 			printf("Error in bwrite (syncFS)\n");
             return -1;
         }

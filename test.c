@@ -89,13 +89,13 @@ int test_removeFile(){
  * @return 0 if all the tests are correct and -1 otherwise
  */
 int checkCreateFile(){
-	if(strcmp(inode[0].name, "") == 0){
+	if(strcmp(inodeList -> inodeArray[0].name, "") == 0){
 		return -1;
 	}
-	if(inode[0].size != 0){ /* check number of blocks for the inode map */
+	if(inodeList -> inodeArray[0].size != 0){ /* check number of blocks for the inode map */
 		return -1;
 	}
-	if(inode[0].directBlock != 0){ /* check number of blocks for the data map */
+	if(inodeList -> inodeArray[0].directBlock != 0){ /* check number of blocks for the data map */
 		return -1;
 	}
 	/*if(strcmp(inode[0].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2)))) != 0){ // check number of inodes     Cambiar padding
@@ -149,7 +149,7 @@ int checkMakeFS(){
 	if(sb.deviceSize != DEV_SIZE){ /* check the size of the File System */
 		return -1;
 	}
-	if(sb.firstInode != ( 2  )){ /* check the correct position of the first inode */
+	if(sb.firstInode != ( 2 )){ /* check the correct position of the first inode */
 		return -1;
 	}
 	if(sb.firstDataBlock != ( sb.firstInode + sb.inodesBlocks )){ /* check the correct position of the first data block */
@@ -168,8 +168,8 @@ int checkSyncFS(){
     if(cmpDisk(1, SIZE_OF_BLOCK, (char *) (&sb)) < 0){ return -1;}
 
 	/* compare the inodes with the ones at the disk */
-	for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE) ; i++){
-		if(cmpDisk(i + sb.firstInode, SIZE_OF_BLOCK , (char*) (&inode[i])) < 0){ return -1;}
+	for(int i = 0; i < sb.inodesBlocks; i++){
+		if(cmpDisk(i + sb.firstInode, SIZE_OF_BLOCK , (char*) (&inodeList)) < 0){ return -1;}
 	}
 
 	return 0;
@@ -179,7 +179,7 @@ int checkSyncFS(){
  * Compares the blocks from the disk with the superblock
  *
  * @param startPoint: the starting block to read blocks
- * @param blocks: the number of blocks to compare
+ * @param blocks: the number of bytes to compare
  * @param structToComp: is the struct to compare, such as the superblock, convert to an array of bytes
  *
  * @return 0 if all the tests are correct and -1 otherwise
