@@ -183,7 +183,7 @@ int removeFile(char *fileName)
 		inode[position].directBlock = 0;
 		strcpy(inode[position].padding, "");
 
-		sb.i_map[position] = 0;
+		bitmap_setbit(sb.i_map, position, 0);
 		/* Set the position of the new file as free in the imap and bmap*/
 		//ifree(position);
 		//bfree(position);
