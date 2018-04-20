@@ -35,65 +35,59 @@ char buffer_block[BLOCK_SIZE];
  * @param deviceSize: size of the disk to be formatted in bytes.
  * @return 	0 if success, -1 otherwise.
  */
-int mkFS(long deviceSize)
-{
-	int deviceSizeInt = (int) (deviceSize); /* convert the size of the file to integer */
-	char block[BLOCK_SIZE];
-	/* check the validity of the size of the device */
-	if(deviceSizeInt < MIN_FILE_SYSTEM_SIZE || deviceSizeInt > MAX_FILE_SYSTEM_SIZE){
-		return -1;
-	}
+ int mkFS(long deviceSize)
+ {
+ 	int deviceSizeInt = (int) (deviceSize); /* convert the size of the file to integer */
+ 	/* check the validity of the size of the device */
+	if(deviceSizeInt < MIN_FILE_SYSTEM_SIZE || deviceSizeInt > MAX_FILE_SYSTEM_SIZE) return -1;
 
-	/* Superblock's magic number */
+ 	/* Superblock's magic number */
 	sb.magicNum = 1; /* por poner algo */
-	/* Number of data blocks in the device */
-	sb.dataBlockNum = needed_blocks(deviceSizeInt, 'B'); /* The size of the device over the block size */
-	/* Number of blocks of the data map */
-	sb.dataMapNumBlock = needed_blocks(sb.dataBlockNum, 'b'); /* as many as the maximum amount of files */
-	/* Number of inodes in the device */
-	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
-	/* Number of blocks of the inode map */
-	sb.inodeMapNumBlocks = needed_blocks(sb.numInodes,'b'); /* as many bits as inodes */
-	/* Set the size of the disk */
-	sb.deviceSize = deviceSizeInt;
-  /* Number of the first inode */
-  sb.firstInode = 2 + sb.inodeMapNumBlocks + sb.dataMapNumBlock; /* the first inode is after the data clock bitmap */
-  /* Number of the first data block */
-  sb.firstDataBlock = sb.firstInode + sb.numInodes; /* after the last inode */
+
+ 	/* Number of data blocks in the device */
+ 	sb.dataBlockNum = needed_blocks(deviceSizeInt, 'B'); /* The size of the device over the block size */
+
+ 	/* Number of inodes in the device */
+ 	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
+
+ 	/* Set the size of the disk */
+ 	sb.deviceSize = deviceSizeInt;
+
+  /* Number of the first inode */
+  sb.firstInode = 2; /* the first inode is after the superblock */
+
+ 	/* calculate the number of inode_block_t that we need */
+ 	sb.inodesBlocks = (int) (INODE_MAX_NUMBER / INODE_PER_BLOCK);
+ 	if(((INODE_MAX_NUMBER % INODE_PER_BLOCK)) != 0) sb.inodesBlocks++;
+
+  /* Number of the first data block */
+  sb.firstDataBlock = sb.firstInode + sb.inodesBlocks; /* after the last inode block */
 
 	/* memory for the inodes */
-	inode = malloc(sizeof(inode_t) * sb.numInodes);
+ 	inode = malloc(sizeof(inode_t) * sb.numInodes);
 
-	/* allocating memory to the bitmaps */
-	i_map = malloc(sizeof(char) * sb.numInodes); /* inode bitmap */
-	b_map = malloc(sizeof(char) * sb.dataBlockNum); /* block bitmap */
+ 	/* memory for the list of inodes */
+ 	inodeList = malloc(sizeof(inode_block_t) * sb.inodesBlocks);
 
-	/* Setting as free all the bitmap positions */
-	for(int i = 0; i < sb.numInodes; i++){ /* inode bitmap */
-		i_map[i] = 0; /* free */
-	}
-	for(int i = 0; i < sb.dataBlockNum; i++){ /* block bitmap */
-		b_map[i] = 0; /* free */
-	}
+ 	/* Setting as free all the bitmap positions */
+ 	for(int i = 0; i < sb.numInodes; i++){ /* inode bitmap */
+ 		bitmap_setbit(sb.i_map, i, 0); /* free */
+ 	}
 
-	/* Free the inodes */
-	for(int i = 0; i < sb.numInodes; i++){ /* block bitmap */
-		memset(&(inode[i]), 0, sizeof(inode_t));
-	}
+ 	for(int i = 0; i < sb.dataBlockNum; i++){ /* block bitmap */
+ 		bitmap_setbit(sb.b_map, i, 0); /* free */
+ 	}
 
-	/* write the default file system into disk */
-	if( umount() < 0 ){ /* check for errors in umount */
-		printf("Error in umount\n");
-		return -1;
-	}
+	 /* Free the inodes */
+	 for(int i = 0; i < sb.numInodes; i++){
+	 	memset(&(inode[i]), 0, sizeof(inode_t));
+	 }
 
-	/* Write on disk the superblock */
-	memcpy(block,&sb, BLOCK_SIZE);
-	if(bwrite(NAME_DISK,0,block) == -1) return -4;
+	 /* write the default file system into disk */
+	 if( umount() < 0 )	return -1;
 
-	printSuperBlock(sb);
-	printInode(inode[0]);
-	return 0;
+	 printSuperBlock(sb);
+	 return 0;
 }
 
 /*
@@ -195,14 +189,14 @@ int createFile(char *fileName)
 
 	if(position < 0 || bPos < 0) return -1; 		/* error while ialloc */
 
-	i_map[position] = 1; 												/* Position in i_bit_map is now occupied */
 	strcpy(inode[i].name,fileName); 						/* file name */
 	inode[i].size = 0;													/* Size set to 0 as file is initially empty */
-	inode[position].directBlock = bPos;					/* Set direct block to be pointed */
-	strcpy(inode[position].padding, (char *)malloc(BLOCK_SIZE - (NAME_MAX+(sizeof(int)*2))));
+	inode[i].directBlock = bPos;								/* Set direct block to be pointed */
+	inode[i].ptr = 0;														/* Set pointer of the file to 0 */
+	strcpy(inode[i].padding, (char *)malloc(BLOCK_SIZE - (NAME_MAX+(sizeof(int)*2))));
 
 	/* Write on disk the inode created */
-	if(bwrite(NAME_DISK,sb.firstInode,buffer_block) == -1) return -3;
+	if(bwrite(DEVICE_IMAGE,sb.firstInode,buffer_block) == -1) return -3;
 
 	return 0;
 }
@@ -212,29 +206,20 @@ int createFile(char *fileName)
  * @param fileName: name of the file to be removed.
  * @return	0 if success, -1 if the file does not exist, -2 in case of error..
  */
-int removeFile(char *fileName){     //DEBERIAMOS TAMBIEN CERRAR EL FILE?? closeFile(fileDes);
-	/* Check NF2 */
-	if(strlen(fileName) > NAME_MAX){
-		printf("File name too long. The maximum length for a file name is 32 characters\n");
-		return -2;
-	}
-
-	int i = 0;
-	while(strcmp(inode[i].name, "") != 0){
-		if(fileName == inode[i].name){  //OJO CUIDADO strcmp() !!!!!!!
-			strcpy(inode[i].name, "");        //MIRAR MEMSET()
-			inode[i].size = 0;
-			inode[i].directBlock = 0;
-			//inode[i].padding = "/0";     //????
-			i_map[i] = 0;
-			//free(inode[i]); no va maquina
-			printf("File %s deleted\n", fileName);
+int removeFile(char *fileName)
+{
+	for(int i = 0; i < sb.numInodes; i++){
+		/* File does not exist */
+		if(strcmp(inode[i].name,fileName) == -1){
+			return -1;
+		}
+		else{ 															/* File Exists */
+			i_map[i] = 0;											/* Free Bitmap */
+			ifree(i]);												/* Free inode */
 			return 0;
 		}
-		i++;
 	}
-	printf("File %s does not exist\n", fileName);
-	return -1;
+	return -2;
 }
 
 /*
@@ -252,11 +237,8 @@ int openFile(char *fileName)
 		/* If the file name is the same as the one in the inode and the entry of
 		that inode in the bitmap is not empty then the file is ready to be openned */
 		if((strcmp(fileName,inode[i].name) == 0) && i_map[i] == 1){
-			/* Errors... */
-			if(lseek(i, 0, SEEK_SET) < 0){
-				printf("Error moving the pointer of file: %s\n", fileName);
-				return -2;
-			}
+			/* Set pointer of file to 0 */
+			if(node[i].ptr > 0) inode[i].ptr = 0;
 			return i; //i is the file descriptor
 		}
 	}
@@ -281,7 +263,6 @@ int closeFile(int fileDescriptor)
 
 		}
 	}
-	return 0;
 }
 
 /*
@@ -298,15 +279,29 @@ int closeFile(int fileDescriptor)
  */
 int readFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	ssize_t bytesRead = 0;
-	while(bytesRead < numBytes){
-		if(bytesRead += read(fileDescriptor, buffer, numBytes) < 0){ //read files 1 byte by one
-		printf("Error reading the file\n");
-		return -1;
+	int bytesRead = 0;
+	int numBytesAux = numBytes;
+	/* If the file descriptor does not exist or no bytes to read*/
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0) return -1;
+
+	/* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
+	if(inode[fileDescriptor].size == 0) return bytesRead; /* Return 0 bytes (empty file) */
+	else{ //Size is not equal to zero
+		/* Repeat the bread operation until "numBytes go to zero" */
+		while(numBytesAux != 0){
+			/* Read the inode until the numBytes has been read*/
+			bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block);
+			/* If the number of bytes to be read are bigger than the size of the file */
+			if(numBytes <= inode[fileDescriptor].size){
+				/* It was read the whole file or partially */
+				bytesRead = numBytes;
+				numBytesAux = numBytesAux - bytesRead;
+			}
+			//else ?
 		}
+		//TODO: guardar en buffer
 	}
-	printf("%zd bytes successfully read from the file\n", bytesRead);
-	return (int)bytesRead;
+	return bytesRead;
 }
 
 /*
@@ -329,15 +324,13 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	ssize_t bytesWritten = 0;
-	while(bytesWritten < numBytes){
-		if(bytesWritten += write(fileDescriptor, buffer, numBytes) < 0){
-			printf("Error when writing in the file\n");
-			return -1;
-		}
-	}
-	printf("%zd bytes successfully written in the file\n", bytesWritten);
-	return (int)bytesWritten;
+	int bytesWritten = 0;
+	int numBytesAux = numBytes;
+	/* If the file descriptor does not exist or no bytes to write */
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0) return -1;
+
+
+	return bytesWritten;
 }
 
 /*
@@ -353,11 +346,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int lseekFile(int fileDescriptor, long offset, int whence)
 {
-	if(lseek(fileDescriptor, offset, whence) < 0){
-		printf("Error moving the pointer of file: %d\n", fileDescriptor);
-		return -1;
-	}
-	printf("Seek pointer successfully moved\n");
+
 	return 0;
 }
 
@@ -376,6 +365,7 @@ int checkFS(void)
  */
 int checkFile(char *fileName)
 {
+
 	return -2;
 }
 
@@ -552,10 +542,6 @@ int bfree (int block_id){
 	return 0;
 }
 
-/**
- * Prints all the data from an inode
- * 
- */
 void printInode(inode_t inode){
 	if(printf("File name: %s\n", inode.name) < 0){
         printf("Could not print Magic number");
@@ -569,14 +555,4 @@ void printInode(inode_t inode){
     if(printf("Padding: %s\n", inode.padding) < 0){
         printf("Could not print the padding");
     }
-}
-
-int getInodePosition(char *fname){
-	for(int i = 0; i < sb.numInodes; i++){
-		if(strcmp(inode[i].name, fname) == 0){
-			return i;
-		}
-	}
-	printf("Could not find the file\n");
-	return -1;
 }

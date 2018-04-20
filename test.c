@@ -45,6 +45,7 @@ int test_removeFile();
 int checkRemoveFile();
 
 
+
 /**
  * Test all the funtionalities of the method mkFS
  *
@@ -77,6 +78,9 @@ int test_removeFile(){
 	if(testOutput(removeFile("test.txt"), "removeFile") < 0) {return -1;}
 	/* Check the correct assigned values of the superblock in the FS */
     if(testOutput(checkRemoveFile(), "checkRemoveFile") < 0) {return -1;}
+
+	printf("\n");
+	return 0;
 }
 
 /**
@@ -88,21 +92,20 @@ int checkCreateFile(){
 	if(strcmp(inode[0].name, "") == 0){
 		return -1;
 	}
-	if(inode[0].size == 0){ /* check number of blocks for the inode map */
+	if(inode[0].size != 0){ /* check number of blocks for the inode map */
 		return -1;
 	}
-	if(inode[0].directBlock != 44){ /* check number of blocks for the data map */
+	if(inode[0].directBlock != 0){ /* check number of blocks for the data map */
 		return -1;
 	}
-	/*
-	if(inode[0].padding == ){ // check number of inodes 
+	/*if(strcmp(inode[0].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2)))) != 0){ // check number of inodes     Cambiar padding
+		return -1;
+	}*/
+	if(sb.i_map[0] != 1){
 		return -1;
 	}
-	*/
-	
 	return 0;
-}
-
+}	
 
 /**
  * Checks the correct creation of files inside "disk.data"
@@ -119,12 +122,12 @@ int checkRemoveFile(){
 	if(inode[0].directBlock == 44){ /* check number of blocks for the data map */
 		return -1;
 	}
-	/*
-	if(inode[0].padding != ){ // check number of inodes 
+	/*if(strcmp(inode[0].padding, "") != 0){ // check number of inodes     Cambiar padding
+		return -1;
+	}*/
+	if(sb.i_map[0] != 0){
 		return -1;
 	}
-	*/
-	
 	return 0;
 }
 
@@ -137,12 +140,6 @@ int checkMakeFS(){
 	if(sb.magicNum != 1){ /* check magic number */
 		return -1;
 	}
-	if(sb.inodeMapNumBlocks != needed_blocks(sb.numInodes,'b')){ /* check number of blocks for the inode map */
-		return -1;
-	}
-	if(sb.dataMapNumBlock != needed_blocks(sb.dataBlockNum, 'b')){ /* check number of blocks for the data map */
-		return -1;
-	}
 	if(sb.numInodes != INODE_MAX_NUMBER){ /* check number of inodes */
 		return -1;
 	}
@@ -152,10 +149,10 @@ int checkMakeFS(){
 	if(sb.deviceSize != DEV_SIZE){ /* check the size of the File System */
 		return -1;
 	}
-	if(sb.firstInode != ( 2 + sb.inodeMapNumBlocks + sb.dataMapNumBlock )){ /* check the correct position of the first inode */
+	if(sb.firstInode != ( 2  )){ /* check the correct position of the first inode */
 		return -1;
 	}
-	if(sb.firstDataBlock != ( sb.firstInode + sb.numInodes )){ /* check the correct position of the first data block */
+	if(sb.firstDataBlock != ( sb.firstInode + sb.inodesBlocks )){ /* check the correct position of the first data block */
 		return -1;
 	}
 	return 0;
@@ -169,12 +166,6 @@ int checkMakeFS(){
 int checkSyncFS(){
     /* compare the superblock with the first block of the disk */
     if(cmpDisk(1, SIZE_OF_BLOCK, (char *) (&sb)) < 0){ return -1;}
-
-    /* compare the inode map with the one at the disk */
-    if(cmpDisk(2 , SIZE_OF_BLOCK * sb.inodeMapNumBlocks, i_map) < 0){ return -1;}
-
-	/* compare the block map with the one at the disk */
-	if(cmpDisk(2 + sb.inodeMapNumBlocks, SIZE_OF_BLOCK * sb.dataMapNumBlock , b_map) < 0){ return -1;}
 
 	/* compare the inodes with the ones at the disk */
 	for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE) ; i++){
@@ -248,10 +239,10 @@ int test_unmountFS(){
  */
 int checkUnmountFS(){
 	/* check if the inode map is empty */
-	if(strcmp(i_map, "") != 0){ return -1;}
+	if(strcmp(sb.i_map, "") != 0){ return -1;}
 
 	/* check if the inode map is empty */
-	if(strcmp(b_map, "") != 0){ return -1;}
+	if(strcmp(sb.b_map, "") != 0){ return -1;}
 
     /* check if the inodes are empty */
     for(int i = 0; i < sb.numInodes; i++) { /* block bitmap */
@@ -294,14 +285,6 @@ int main() {
 
 	/*** test for removing a file ***/
 	test_removeFile();
-
-	if(ret != 0) {
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST createFile ", ANSI_COLOR_RED, "FAILED\n", ANSI_COLOR_RESET);
-		return -1;
-	}
-	fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST createFile ", ANSI_COLOR_GREEN, "SUCCESS\n", ANSI_COLOR_RESET);
-
-	///////
 
 	ret = unmountFS();
 	if(ret != 0) {
