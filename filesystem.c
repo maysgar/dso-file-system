@@ -22,7 +22,8 @@
 
 superblock_t sb; /* superblock */
 inode_t * inode; /* array of inodes */
-char buffer_block[BLOCK_SIZE];
+inode_block_t * inodeList; /* Struct of inodes */
+char buffer_block[2048];
 
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
@@ -38,7 +39,6 @@ char buffer_block[BLOCK_SIZE];
 int mkFS(long deviceSize)
 {
 	int deviceSizeInt = (int) (deviceSize); /* convert the size of the file to integer */
-	char block[BLOCK_SIZE];
 	/* check the validity of the size of the device */
 	if(deviceSizeInt < MIN_FILE_SYSTEM_SIZE || deviceSizeInt > MAX_FILE_SYSTEM_SIZE){
 		return -1;
@@ -48,36 +48,38 @@ int mkFS(long deviceSize)
 	sb.magicNum = 1; /* por poner algo */
 	/* Number of data blocks in the device */
 	sb.dataBlockNum = needed_blocks(deviceSizeInt, 'B'); /* The size of the device over the block size */
-	/* Number of blocks of the data map */
-	sb.dataMapNumBlock = needed_blocks(sb.dataBlockNum, 'b'); /* as many as the maximum amount of files */
 	/* Number of inodes in the device */
 	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
-	/* Number of blocks of the inode map */
-	sb.inodeMapNumBlocks = needed_blocks(sb.numInodes,'b'); /* as many bits as inodes */
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
   /* Number of the first inode */
-  sb.firstInode = 2 + sb.inodeMapNumBlocks + sb.dataMapNumBlock; /* the first inode is after the data clock bitmap */
-  /* Number of the first data block */
-  sb.firstDataBlock = sb.firstInode + sb.numInodes; /* after the last inode */
+  sb.firstInode = 2; /* the first inode is after the superblock */
+
+	/* calculate the number of inode_block_t that we need */
+	sb.inodesBlocks = (int) (INODE_MAX_NUMBER / INODE_PER_BLOCK);
+	if(((INODE_MAX_NUMBER % INODE_PER_BLOCK)) != 0){
+		sb.inodesBlocks++;
+	}
+
+    /* Number of the first data block */
+    sb.firstDataBlock = sb.firstInode + sb.inodesBlocks; /* after the last inode block */
 
 	/* memory for the inodes */
 	inode = malloc(sizeof(inode_t) * sb.numInodes);
 
-	/* allocating memory to the bitmaps */
-	i_map = malloc(sizeof(char) * sb.numInodes); /* inode bitmap */
-	b_map = malloc(sizeof(char) * sb.dataBlockNum); /* block bitmap */
+	/* memory for the list of inodes */
+	inodeList = malloc(sizeof(inode_block_t) * sb.inodesBlocks);
 
 	/* Setting as free all the bitmap positions */
 	for(int i = 0; i < sb.numInodes; i++){ /* inode bitmap */
-		i_map[i] = 0; /* free */
+		bitmap_setbit(sb.i_map, i, 0); /* free */
 	}
 	for(int i = 0; i < sb.dataBlockNum; i++){ /* block bitmap */
-		b_map[i] = 0; /* free */
+		bitmap_setbit(sb.b_map, i, 0); /* free */
 	}
 
 	/* Free the inodes */
-	for(int i = 0; i < sb.numInodes; i++){ /* block bitmap */
+	for(int i = 0; i < sb.numInodes; i++){
 		memset(&(inode[i]), 0, sizeof(inode_t));
 	}
 
@@ -86,13 +88,9 @@ int mkFS(long deviceSize)
 		printf("Error in umount\n");
 		return -1;
 	}
-
-	/* Write on disk the superblock */
-	memcpy(block,&sb, BLOCK_SIZE);
-	if(bwrite(NAME_DISK,0,block) == -1) return -4;
-
 	printSuperBlock(sb);
-	printInode(inode[0]);
+	/* Write superblock */
+	bwrite(DEVICE_IMAGE,0,buffer_block);
 	return 0;
 }
 
@@ -110,23 +108,9 @@ int mountFS(void)
         printf("Error in bread (mountFS)\n");
         return -1;
     }
-    /* read from disk inode map */
-    for(int i = 0; i < sb.inodeMapNumBlocks; i++){
-        if( bread(DEVICE_IMAGE, 2+i, (char *) (i_map) + i*BLOCK_SIZE) < 0){
-            printf("Error in bread (mountFS)\n");
-            return -1;
-        }
-    }
-    /* read from disk block map */
-    for(int i = 0; i < sb.dataMapNumBlock; i++){
-        if( bread(DEVICE_IMAGE, 2+i+sb.inodeMapNumBlocks, (char *) (b_map) + i*BLOCK_SIZE) < 0){
-            printf("Error in bread (mountFS)\n");
-            return -1;
-        }
-    }
-    /* read inodes from disk */
-    for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE); i++){
-        if( bread(DEVICE_IMAGE, i+sb.firstInode, (char *) (inode) + i*BLOCK_SIZE) < 0){
+    /* read the inodeList from disk */
+    for(int i = 0; i < sb.inodesBlocks; i++){
+        if( bread(DEVICE_IMAGE, i+sb.firstInode, (char *) (&inodeList) + i*BLOCK_SIZE) < 0){
             printf("Error in bread (mountFS)\n");
             return -1;
         }
@@ -143,24 +127,11 @@ int mountFS(void)
  */
 int unmountFS(void)
 {
-	int i = 0;
-
-	/* delete inode map */
-  memset(&(i_map), 0, sb.inodeMapNumBlocks);
-	while(i_map[i] == 0) i++;
-	if(i_map[i] == 1) return -1; /* Not emptied correctly */
-
-	/* delete block map */
-	memset(&(b_map), 0, sb.dataMapNumBlock);
-	while(b_map[i] == 0) i++;
-	if(b_map[i] == 1) return -1; /* Not emptied correctly */
-
 	/* Free the inodes */
-	for(int i = 0; i < sb.numInodes; i++) memset(&(inode[i]), 0, sizeof(inode_t));
-
-	//BWRITE
-
-	return 0;
+	for(int i = 0; i < sb.numInodes; i++){
+		memset(&(inode[i]), 0, sizeof(inode_t));
+	}
+    return 0;
 }
 
 /*
@@ -175,34 +146,22 @@ int unmountFS(void)
  */
 int createFile(char *fileName)
 {
-	int i = 0;
-	int position = ialloc(); 				/* get the position of a free inode */
-	int bPos = alloc(); 						/* get the position of a free data block */
-
 	/* Check NF2 */
-	if(strlen(fileName) > NAME_MAX){
-		printf("File name too long. The maximum length for a file name is 32 characters\n");
-		return -2;
-	}
+	if(strlen(fileName) > NAME_MAX) return -2;
 
-	/* File already exists */
-	for(int i = 0; i < sb.numInodes; i++){
-		if(strcmp(fileName,inode[i].name) == 0){
-			printf("File already exists\n");
-			return -1;
-		}
-	}
+  if(getInodePosition(fileName) > 0) return -1;
 
-	if(position < 0 || bPos < 0) return -1; 		/* error while ialloc */
+	int position = ialloc(); /* get the position of a free inode */
+    if(position < 0) {return -1;} /* error while ialloc */
 
-	strcpy(inode[i].name,fileName); 						/* file name */
-	inode[i].size = 0;													/* Size set to 0 as file is initially empty */
-	inode[position].directBlock = bPos;					/* Set direct block to be pointed */
-	strcpy(inode[position].padding, (char *)malloc(BLOCK_SIZE - (NAME_MAX+(sizeof(int)*2))));
+	int bPos = alloc(); /* get the position of a free data block */
+	inodeList -> inodeArray[position].directBlock = bPos;
+	inodeList -> inodeArray[position].ptr = 0;
+	strcpy(inodeList -> inodeArray[position].name, fileName);
+	inodeList -> inodeArray[position].size = 0;
+	//strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2))));   Hay que cambiar el padding
 
-	/* Write on disk the inode created */
 	if(bwrite(DEVICE_IMAGE,sb.firstInode,buffer_block) == -1) return -3;
-
 	return 0;
 }
 
@@ -213,18 +172,33 @@ int createFile(char *fileName)
  */
 int removeFile(char *fileName)
 {
-	for(int i = 0; i < sb.numInodes; i++){
-		/* File does not exist */
-		if(strcmp(inode[i].name,fileName) == -1){
-			return -1;
-		}
-		else{ 															/* File Exists */
-			i_map[i] = 0;											/* Free Bitmap */
-			ifree(i]);												/* Free inode */
-			return 0;
-		}
+	int position = getInodePosition(fileName);
+
+	/* File does not exist */
+	if(strcmp(inode[position].name,fileName) == -1){
+		return -1;
 	}
-	return -2;
+
+	/* Name is too long */
+	if(strlen(fileName) > NAME_MAX){
+		return -2;
+	}
+
+	if(position >= 0){
+		strcpy(inode[position].name, "");        //MIRAR MEMSET()
+		inode[position].size = 0;
+		inode[position].directBlock = 0;
+		inode[position].ptr = 0;
+		//strcpy(inode[position].padding, "");          Hay que cambiar el padding
+
+		bitmap_setbit(sb.i_map, position, 0);
+		return 0;
+	}
+	else{
+		printf("File %s does not exist\n", fileName);
+		return -1;
+
+	}
 }
 
 /*
@@ -236,26 +210,18 @@ int removeFile(char *fileName)
  * @param fileName: name of the file to be opened.
  * @return	The file descriptor if possible, -1 if file does not exist, -2 in case of error..
  */
-int openFile(char *fileName)
-{
-	for(int i = 0; i < sb.numInodes; i++){
-		/* If the file name is the same as the one in the inode and the entry of
-		that inode in the bitmap is not empty then the file is ready to be openned */
-		if((strcmp(fileName,inode[i].name) == 0) && i_map[i] == 1){
-			/* Errors... */
-			if(lseek(i, 0, SEEK_SET) < 0){
-				printf("Error moving the pointer of file: %s\n", fileName);
-				return -2;
-			}
-			return i; //i is the file descriptor
-		}
+ int openFile(char *fileName)
+ {
+	int position = getInodePosition(fileName);
+	/* If the file name is the same as the one in the inode and the entry of
+	that inode in the bitmap is not empty then the file is ready to be openned */
+	if((strcmp(fileName,inode[position].name) == 0) && sb.i_map[position] == 1){
+		/* Set pointer of file to 0 */
+		if(inode[position].ptr > 0) inode[position].ptr = 0;
+		return position; //i is the file descriptor
 	}
-	printf("File %s does not exist\n", fileName);
-	return -1;
-
-	//CRC MIRAR TEMITA INTEGRITY
-	//#include <fcntl.h> !!!!!!!!!!
-}
+ 	return -1;
+ }
 
 /*
  * @brief	Closes a file.
@@ -264,13 +230,13 @@ int openFile(char *fileName)
  */
 int closeFile(int fileDescriptor)
 {
-	for(int i = 0; i < sb.numInodes; i++){
-		/* If the fd is out of bounds, not in the inode list... */
-		if(fileDescriptor < 0 || fileDescriptor > sb.numInodes) return -1;
-		if(fileDescriptor == i){
-
-		}
+	//MIRAR PDF
+	if(close(fileDescriptor) < 0){
+		printf("Error closing the file\n");
+		return -1;
 	}
+	printf("File closed successfully\n");
+	return 0;
 }
 
 /*
@@ -332,13 +298,15 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	int bytesWritten = 0;
-	int numBytesAux = numBytes;
-	/* If the file descriptor does not exist or no bytes to write */
-	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0) return -1;
-
-	//Necesitamos un pointer en el file, tenemos eso?
-	return bytesWritten;
+	ssize_t bytesWritten = 0;
+	while(bytesWritten < numBytes){
+		if(bytesWritten += write(fileDescriptor, buffer, numBytes) < 0){
+			printf("Error when writing in the file\n");
+			return -1;
+		}
+	}
+	printf("%zd bytes successfully written in the file\n", bytesWritten);
+	return (int)bytesWritten;
 }
 
 /*
@@ -354,7 +322,11 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int lseekFile(int fileDescriptor, long offset, int whence)
 {
-	
+	if(lseek(fileDescriptor, offset, whence) < 0){
+		printf("Error moving the pointer of file: %d\n", fileDescriptor);
+		return -1;
+	}
+	printf("Seek pointer successfully moved\n");
 	return 0;
 }
 
@@ -373,7 +345,6 @@ int checkFS(void)
  */
 int checkFile(char *fileName)
 {
-
 	return -2;
 }
 
@@ -384,7 +355,7 @@ int checkFile(char *fileName)
 int umount (void){
 	/* check that all the files are closed  */
 	for(int i = 0; i < sb.numInodes; i++){
-		if(i_map[i] == 1){ /* check if the inode is in used */
+		if((bitmap_getbit(sb.i_map, i)) == 1){ /* check if the inode is in used */
 			return -1; /* inode in used  */
 		}
 	}
@@ -408,23 +379,9 @@ int syncFS (void){
 	    printf("Error in bwrite (syncFS)\n");
         return -1;
 	}
-    /* write inode map to disk */
-	for(int i = 0; i < sb.inodeMapNumBlocks; i++){
-        if( bwrite(DEVICE_IMAGE, 2+i, (char *) i_map + i*BLOCK_SIZE) < 0){
-            printf("Error in bwrite (syncFS)\n");
-            return -1;
-        }
-	}
-    /* write block map to disk */
-    for(int i = 0; i < sb.dataMapNumBlock; i++){
-        if( bwrite(DEVICE_IMAGE, 2+i+sb.inodeMapNumBlocks, (char *) b_map + i*BLOCK_SIZE) < 0){
-            printf("Error in bwrite (syncFS)\n");
-            return -1;
-        }
-    }
-	/* write inodes to disk */
-	for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE) ; i++){
-		if( bwrite(DEVICE_IMAGE, i+sb.firstInode, (char *) inode + i*BLOCK_SIZE) < 0){
+	/* write the inode list to disk */
+	for(int i = 0; i < sb.inodesBlocks; i++){
+		if( bwrite(DEVICE_IMAGE, i+sb.firstInode, (char *) (&inodeList) + i*BLOCK_SIZE) < 0){
 			printf("Error in bwrite (syncFS)\n");
             return -1;
         }
@@ -435,12 +392,6 @@ int syncFS (void){
 void printSuperBlock(superblock_t superBlock){
     if(printf("Magic number: %d\n", superBlock.magicNum) < 0){
         printf("Could not print Magic number");
-    }
-    if(printf("Number of blocks of the i-node map: %d\n", superBlock.inodeMapNumBlocks) < 0){
-        printf("Could not print Number of blocks of the i-node map");
-    }
-    if(printf("Number of blocks of the data map: %d\n", superBlock.dataMapNumBlock) < 0){
-        printf("Could not print Number of blocks of the data map");
     }
     if(printf("Number of i-nodes in the device: %d\n", superBlock.numInodes) < 0){
         printf("Could not print Number of i-nodes in the device");
@@ -470,14 +421,14 @@ void printSuperBlock(superblock_t superBlock){
 int needed_blocks(int amount, char type){
 	int aux = 0;
 	if(type == 'b'){
-		aux = (amount/8)/BLOCK_SIZE;
-		if(((amount/8)%BLOCK_SIZE) != 0){
+		aux = (amount/8)/SIZE_OF_BLOCK;
+		if(((amount/8)%SIZE_OF_BLOCK) != 0){
 			aux++;
 		}
 	}
 	else if(type == 'B'){
-		aux = amount/BLOCK_SIZE;
-		if((amount%BLOCK_SIZE) != 0){
+		aux = amount/SIZE_OF_BLOCK;
+		if((amount%SIZE_OF_BLOCK) != 0){
 			aux++;
 		}
 	}
@@ -495,8 +446,8 @@ int needed_blocks(int amount, char type){
  */
 int ialloc(void){
     for(int i = 0; i < sb.numInodes; i++){
-        if(i_map[i] == 0){ /* check if the position is free */
-            i_map[i] = 1; /* inode busy */
+		if(bitmap_getbit(sb.i_map, i) == 0){ /* check if the position is free */
+			bitmap_setbit(sb.i_map, i, 1); /* inode busy */
             memset(&(inode[i]), 0, sizeof(inode_t) ); /* default values to the inode */
             return i; /* return the position of the inode */
         }
@@ -512,8 +463,8 @@ int ialloc(void){
 int alloc(void){
     char b[BLOCK_SIZE];
     for(int i = 0; i < sb.dataBlockNum; i++){
-        if(b_map[i] == 0){ /* check if the position is free */
-            b_map[i] = 1; /* block busy */
+        if(bitmap_getbit(sb.b_map, i) == 0){ /* check if the position is free */
+			bitmap_setbit(sb.b_map, i, 1); /* block busy */
             memset(b, 0, BLOCK_SIZE); /* default values to the block */
             bwrite(DEVICE_IMAGE, i + sb.firstDataBlock, b); /* write the empty block in the position found */
             return i; /* return the position of the block */
@@ -532,7 +483,7 @@ int ifree (int inode_id){
 	/* check the validity of the position of the inode */
 	if(inode_id > sb.numInodes) { return -1;}
 	/* free inode */
-	i_map[inode_id] = 0;
+	bitmap_setbit(sb.i_map, inode_id, 0);
 	return 0;
 }
 
@@ -546,10 +497,16 @@ int bfree (int block_id){
 	/* check the validity of the position of the block */
 	if(block_id > sb.dataBlockNum) { return -1;}
 	/* free block */
-	b_map[block_id] = 0;
+	bitmap_setbit(sb.b_map, block_id, 0);
 	return 0;
 }
 
+/**
+ * Print all the fields from an inode
+ *
+ * @param inode : the inode to extract the fields
+ * @return -1 in case of error an 0 otherwise
+ */
 void printInode(inode_t inode){
 	if(printf("File name: %s\n", inode.name) < 0){
         printf("Could not print Magic number");
@@ -560,7 +517,46 @@ void printInode(inode_t inode){
     if(printf("Direct block number: %d\n", inode.directBlock) < 0){
         printf("Could not print Direct block number");
     }
-    if(printf("Padding: %s\n", inode.padding) < 0){
-        printf("Could not print the padding");
-    }
+}
+
+/**
+ * Get the position of the given inode
+ *
+ * @param inode : the inode to extract the position
+ * @return -1 in case of error an the position of the inode otherwise
+ */
+int getInodePosition(char *fname){
+	int count = 0;
+	for(int i = 0; i < sb.inodesBlocks; i++){ /* go through all the inode blocks */
+		inode_block_t inodeListAux = inodeList[i]; /* copy the list of inodes of the current block */
+		for(int j = 0; j <= INODE_PER_BLOCK; j++){ /* go through all the inodes from a block */
+			if(count > INODE_MAX_NUMBER){ /* already checked all the inodes */
+				return -1;
+			}
+			else if(strcmp(inodeListAux.inodeArray[j].name, fname) == 0) {
+				/* Return file position */
+				return i;
+			}
+		}
+	}
+	return -1;
+}
+
+/**
+ * Get the direct block from the inode in the given position
+ *
+ * @param inode_position : the position of the inode
+ * @return -1 in case of error an the direct block of the inode otherwise
+ */
+int bmap(int inode_position, int offset){
+	/* position is not valid */
+	if(inode_position > sb.numInodes){
+		return -1;
+	}
+
+	/* return the inode block */
+	if(offset < SIZE_OF_BLOCK){
+		return inode[inode_position].directBlock;
+	}
+	return -1;
 }
