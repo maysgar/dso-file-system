@@ -99,13 +99,6 @@ int checkMakeFS(){
 	if(sb.magicNum != 1){ /* check magic number */
 		return -1;
 	}
-	/*
-	if(sb.inodeMapNumBlocks != needed_blocks(sb.numInodes,'b')){  check number of blocks for the inode map *
-		return -1;
-	}*
-	if(sb.dataMapNumBlock != needed_blocks(sb.dataBlockNum, 'b')){ * check number of blocks for the data map *
-		return -1;
-	}*/
 	if(sb.numInodes != INODE_MAX_NUMBER){ /* check number of inodes */
 		return -1;
 	}
@@ -132,13 +125,6 @@ int checkMakeFS(){
 int checkSyncFS(){
     /* compare the superblock with the first block of the disk */
     if(cmpDisk(1, SIZE_OF_BLOCK, (char *) (&sb)) < 0){ return -1;}
-
-    /* compare the inode map with the one at the disk *
-    if(cmpDisk(2 , SIZE_OF_BLOCK * sb.inodeMapNumBlocks, sb.i_map) < 0){ return -1;}
-
-	* compare the block map with the one at the disk *
-	if(cmpDisk(2 + sb.inodeMapNumBlocks, SIZE_OF_BLOCK * sb.dataMapNumBlock , sb.b_map) < 0){ return -1;}
-	*/
 
 	/* compare the inodes with the ones at the disk */
 	for(int i = 0; i < (sb.numInodes * sizeof(inode_t) / BLOCK_SIZE) ; i++){
