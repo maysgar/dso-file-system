@@ -12,6 +12,9 @@
 #define PADDING_SUPERBLOCK 999      /* Padding size for the superblock */
 #define PADDING_INODE 999           /* Padding size for the inode */
 #define MAX_BLOCK_PER_FILE 512      /* Maximum number of blocks per file */
+#define IMAP_SIZE INODE_MAX_NUMBER / 8 /* Maximum number of imap entries */
+#define BMAP_SIZE ( ((MAX_FILE_SYSTEM_SIZE) / (SIZE_OF_BLOCK)) -1)  / 8 /* Maximum number of bmap entries */
+
 
 /* Variables used in mkFS for validating the size of the device */
 #define MIN_FILE_SYSTEM_SIZE 50 * 1024    /* Minimum file system size */
@@ -27,13 +30,13 @@ static inline void bitmap_setbit(char *bitmap_, int i_, int val_) {
 
 typedef struct{
   unsigned int magicNum;              /* Magic number of the superblock */
-  unsigned int inodeMapNumBlocks;     /*Number of blocks of the i-node map*/
-  unsigned int dataMapNumBlock;       /* Number of blocks of the data map */
   unsigned int numInodes;             /* Number of i-nodes in the device */
   unsigned int firstInode;            /* Number of the 1st i-node in the device */
   unsigned int dataBlockNum;          /* Number of data blocks in the device */
   unsigned int firstDataBlock;        /* Number of the 1st data block */
   unsigned int deviceSize;            /* Total disk space in bytes */
+  char i_map [IMAP_SIZE];             /* inode map */
+  char b_map [BMAP_SIZE];             /* block map */
   char padding[PADDING_SUPERBLOCK];   /* Padding field for fulfilling a block */
 } superblock_t;
 
@@ -44,8 +47,7 @@ typedef struct{
   char padding[PADDING_INODE];        /* Padding field for fulfilling a block */
 } inode_t;
 
-char * i_map;                         /* inode map */
-char * b_map;                         /* block map */
+
 
 void printSuperBlock(superblock_t superBlock);
 int umount (void); /* write the default File System into the disk */
