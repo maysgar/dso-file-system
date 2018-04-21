@@ -89,13 +89,13 @@ int test_removeFile(){
  * @return 0 if all the tests are correct and -1 otherwise
  */
 int checkCreateFile(){
-	if(strcmp(inodeList -> inodeArray[0].name, "") == 0){
+	if(strcmp(inodeList[0].inodeArray[0].name, "") == 0){
 		return -1;
 	}
-	if(inodeList -> inodeArray[0].size != 0){ /* check number of blocks for the inode map */
+	if(inodeList[0].inodeArray[0].size != 0){ /* check number of blocks for the inode map */
 		return -1;
 	}
-	if(inodeList -> inodeArray[0].directBlock != 0){ /* check number of blocks for the data map */
+	if(inodeList[0].inodeArray[0].directBlock != 0){ /* check number of blocks for the data map */
 		return -1;
 	}
 	/*if(strcmp(inode[0].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2)))) != 0){ // check number of inodes     Cambiar padding
@@ -113,13 +113,13 @@ int checkCreateFile(){
  * @return 0 if all the tests are correct and -1 otherwise
  */
 int checkRemoveFile(){
-	if(strcmp(inode[0].name, "") != 0){
+	if(strcmp(inodeList[0].inodeArray[0].name, "") != 0){
 		return -1;
 	}
-	if(inode[0].size != 0){ /* check number of blocks for the inode map */
+	if(inodeList[0].inodeArray[0].size != 0){ /* check number of blocks for the inode map */
 		return -1;
 	}
-	if(inode[0].directBlock == 44){ /* check number of blocks for the data map */
+	if(inodeList[0].inodeArray[0].directBlock == 44){ /* check number of blocks for the data map */
 		return -1;
 	}
 	/*if(strcmp(inode[0].padding, "") != 0){ // check number of inodes     Cambiar padding
@@ -244,10 +244,19 @@ int checkUnmountFS(){
 	/* check if the inode map is empty */
 	if(strcmp(sb.b_map, "") != 0){ return -1;}
 
-    /* check if the inodes are empty */
-    for(int i = 0; i < sb.numInodes; i++) { /* block bitmap */
-        if(strcmp(inode[i].name, "") != 0){ return -1;}
-    }
+	int count = 0;
+
+	/* check if the inodes are empty */
+	for(int i = 0; i < sb.inodesBlocks; i++){ /* check all the blocks of inodes */
+		inode_block_t inodeListAux = inodeList[i]; /* copy the list of inodes of the current block */
+		for(int j = 0; j <= INODE_PER_BLOCK; j++){ /* go through all the inodes from a block */
+			if(count > INODE_MAX_NUMBER){ /* already checked all the inodes */
+				return 0;
+			}
+			if(strcmp(inodeListAux.inodeArray[j].name, "") != 0){ return -1;}
+			count++;
+		}
+	}
     return 0;
 }
 
