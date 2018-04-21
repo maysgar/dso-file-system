@@ -48,6 +48,7 @@ typedef struct{
     char name[NAME_MAX];                /* file name */
     unsigned int size;                  /* Current file size in Bytes */
     unsigned int directBlock;           /* Direct block number */
+    unsigned int opened;
 } inode_t;
 
 typedef struct{
