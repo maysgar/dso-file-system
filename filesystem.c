@@ -127,7 +127,7 @@ int mountFS(void)
  */
 int unmountFS(void)
 {
-	/* Free the inodes */
+	/* Free the inode blocks */
 	for(int i = 0; i < sb.inodesBlocks; i++){
 		memset(&(inodeList[i]), 0, sizeof(inode_block_t));
 		ifree(i);
@@ -253,7 +253,7 @@ int closeFile(int fileDescriptor)
 		printf("Wrong file descriptor\n");
 		return -1;
 	}
-	printf("File closed successfully\n");
+	//printf("File closed successfully\n");
 	inode[fileDescriptor].opened = 0;
 	return 0;
 }

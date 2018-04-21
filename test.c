@@ -155,7 +155,6 @@ int checkRemoveFile(){
 	return 0;
 }
 
-
 /**
  * Test all the funtionalities of the method openFile
  *
@@ -183,7 +182,7 @@ int checkOpenFile(){
 	if(getInodePosition("test.txt") < 0){ /* check the file exists inside the disk */
 		return -1;
 	}
-	if(inode[getInodePosition("test.txt")].opened == 0){ /* check the file is opened */
+	if(inodeList[0].inodeArray[getInodePosition("test.txt")].opened == 0){ /* check the file is opened */
 		return -1;
 	}
 	/*
@@ -374,8 +373,6 @@ int testOutput(int ret, char * msg){
 }
 
 int main() {
-	int ret; /* return variable */
-
 	/*** test for making the File System ***/
 	test_mkFS();
 
@@ -391,14 +388,14 @@ int main() {
 	/*** test for removing a file ***/
 	test_removeFile();
 
-	ret = unmountFS();
-	if(ret != 0) {
-		fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST unmountFS ", ANSI_COLOR_RED, "FAILED\n", ANSI_COLOR_RESET);
-		return -1;
-	}
-	fprintf(stdout, "%s%s%s%s%s", ANSI_COLOR_BLUE, "TEST unmountFS ", ANSI_COLOR_GREEN, "SUCCESS\n", ANSI_COLOR_RESET);
+	/* create the file to continue testing */
+	createFile("test.txt");
 
-	///////
+	/*** test for opening a file ***/
+	test_openFile();
+
+	/*** test for opening a file ***/
+	test_closeFile();
 
 	return 0;
 }
