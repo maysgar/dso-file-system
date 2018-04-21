@@ -163,7 +163,7 @@ int createFile(char *fileName)
 	position = position % INODE_PER_BLOCK;
 
 	inodeList[aux].inodeArray[position].directBlock = bPos;
-	//inodeList -> inodeArray[position].ptr = 0;
+	inodeList -> inodeArray[position].ptr = 0;
 
   strcpy(inodeList[aux].inodeArray[position].name, fileName);
 	inodeList[aux].inodeArray[position].size = 0;
@@ -273,10 +273,15 @@ int closeFile(int fileDescriptor)
 int readFile(int fileDescriptor, void *buffer, int numBytes)
 {
 	int bytesRead = 0;
-	int numBytesAux = numBytes;
-	int set_pointer = 0;
-	/* If the file descriptor does not exist or no bytes to read*/
-	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0) return -1;
+	int pointer = inode[fileDescriptor].ptr;
+	//int pointer_init = inode[fileDescriptor].ptr;
+
+	/* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
+		to the end of the file or if the inode is unused, error */
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0 ||
+		 pointer == inode[fileDescriptor].size || sb.i_map[fileDescriptor] == 0){
+		return -1;
+	}
 
 	/* If the file is not opened we proceed to open it */
 	if(inode[fileDescriptor].opened == 0){
@@ -285,27 +290,32 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 
 	/* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
 	if(inode[fileDescriptor].size == 0) return bytesRead; /* Return 0 bytes (empty file) */
-	else{ //Size is not equal to zero
-		/* Repeat the bread operation until "numBytes go to zero" */
-		while(numBytesAux != 0){
-			/* Read the inode until the numBytes has been read*/
-			bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block);
-			/* If the number of bytes to be read are bigger than the size of the file */
-			if(numBytes <= inode[fileDescriptor].size){
-				/* It was read the whole file or partially */
-				bytesRead = numBytes;
-				//inode[fileDescriptor].ptr = bytesRead;
-				numBytesAux = numBytesAux - bytesRead;
-			}
-			else{ /* it has not finished reading, continue looping and update ptr */
-				set_pointer = set_pointer + BLOCK_SIZE; /* It has been read the maximum size of a block */
-				//inode[fileDescriptor].ptr = set_pointer;
-				//TODO: This else me da quebraderos de cabeza. Mirar bien todo el método.
-			}
-		}
-		//TODO: guardar en buffer
-	}
-	return bytesRead;
+	/* Size is not equal to zero */
+	// else{
+	// 	/* Repeat the bread operation until "numBytes go to zero" */
+	// 	while(numBytes != bytesRead){
+	// 		/* Read the inode until the numBytes has been read*/
+	// 		if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block) < 0) return -1;
+	// 		/* If the number of bytes to be read plus the bytes to be read are less than the size
+	// 		of the file then proceed to read as normal until the bytes to read have been read. */
+	// 		if(pointer + numBytes < inode[fileDescriptor].size){
+	// 			inode[fileDescriptor].ptr += ; /* Update pointer */
+	// 			bytesRead += ;
+	// 		}
+	// 		/* If the bytes that are left to be read, exceed the file size then... */
+	// 		else{
+	// 			memcpy(buffer, &(buffer_b[pointer]), inode[fileDescriptor].size - pointer);
+	// 			/* Update pointer to the end of the file even if there are more bytes to read,
+	// 			file size is exceeded */
+	// 			inode[fileDescriptor].ptr = inode[fileDescriptor].size;
+	// 			return inode[fileDescriptor].size - pointer_init;
+	// 		}
+	// 		char buffer_b[bytesRead];
+	// 		memcpy(buffer, buffer_b, numBytes); /* Copy whole bytes read to buffer */
+	// 		return bytesRead;
+	// 	}
+	// }
+	return -1;
 }
 
 /*
@@ -329,14 +339,14 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
 	int bytesWritten = 0;
-	/* If the file descriptor does not exist or no bytes to read*/
+	/* If the file descriptor does not exist or no bytes to read */
 	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0) return -1;
 
 	/* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
 	if(inode[fileDescriptor].size == 0) return bytesWritten; /* Return 0 bytes (empty file) */
 	else{ //Size is not equal to zero
 		/* Update of the pointer with the bytes to be read */
-		//inode[fileDescriptor].ptr = inode[fileDescriptor].ptr + numBytes;
+		inode[fileDescriptor].ptr = inode[fileDescriptor].ptr + numBytes;
 		bwrite(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block);
 		/* If the size of the file is less than the number of bytes to be written
 		 	 update data blocks for the file... */
@@ -345,7 +355,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 		}
 	}
 	//Habra que cambiarlo
-	return -1; 
+	return -1;
 }
 
 /*
@@ -363,7 +373,7 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 {
 	/* DIAPOS:
 	lseek(fd, newPos)
-	kfd = current->files.fd_array[fd]; 
+	kfd = current->files.fd_array[fd];
 	kfd->f_pos = newPos;
 	*/
 
