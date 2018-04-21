@@ -130,6 +130,9 @@ int unmountFS(void)
 	/* Free the inodes */
 	for(int i = 0; i < sb.inodesBlocks; i++){
 		memset(&(inodeList[i]), 0, sizeof(inode_block_t));
+  }
+		ifree(i);
+		bfree(i);
 	}
     return 0;
 }
@@ -162,9 +165,12 @@ int createFile(char *fileName)
 
 	inodeList[aux].inodeArray[position].directBlock = bPos;
 	//inodeList -> inodeArray[position].ptr = 0;
-	strcpy(inodeList[aux].inodeArray[position].name, fileName);
+
+  strcpy(inodeList[aux].inodeArray[position].name, fileName);
 	inodeList[aux].inodeArray[position].size = 0;
-	//strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2))));   Hay que cambiar el padding
+	/* We set the new file to closed */
+	inodeList[aux].inodeArray[position].opened = 0;
+	//strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*3))));   Hay que cambiar el padding
 
 	//if(bwrite(DEVICE_IMAGE,sb.firstInode,buffer_block) == -1) return -3;
 	return 0;
@@ -188,9 +194,13 @@ int removeFile(char *fileName)
 	position = position % INODE_PER_BLOCK;
 
 	if(position >= 0){
+ 		if(inodeList[aux].inodeArray[position].opened == 1){
+			closeFile(position);
+		}
 		strcpy(inodeList[aux].inodeArray[position].name, "");        //MIRAR MEMSET()
 		inodeList[aux].inodeArray[position].size = 0;
 		inodeList[aux].inodeArray[position].directBlock = 0;
+
 		//inode[position].ptr = 0;
 		//strcpy(inode[position].padding, "");          Hay que cambiar el padding
 
@@ -224,6 +234,7 @@ int removeFile(char *fileName)
 	/* If the file name is the same as the one in the inode and the entry of
 	that inode in the bitmap is not empty then the file is ready to be openned */
 	if((strcmp(fileName,inodeList[aux].inodeArray[bPosition].name) == 0) && sb.i_map[position] == 1){
+		inodeList[aux].inodeArray[bPosition].opened = 1;
 		/* Set pointer of file to 0 */
 		//if(inode[position].ptr > 0) inode[position].ptr = 0;
 		return position; //i is the file descriptor
@@ -238,12 +249,13 @@ int removeFile(char *fileName)
  */
 int closeFile(int fileDescriptor)
 {
-	//MIRAR PDF
-	if(close(fileDescriptor) < 0){
-		printf("Error closing the file\n");
+	//PDF: when the file descriptor is closed, all file blocks are flushed to disk
+	if(fileDescriptor < 0){
+		printf("Wrong file descriptor\n");
 		return -1;
 	}
 	printf("File closed successfully\n");
+	inode[fileDescriptor].opened = 0;
 	return 0;
 }
 
@@ -266,6 +278,11 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 	int set_pointer = 0;
 	/* If the file descriptor does not exist or no bytes to read*/
 	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0) return -1;
+
+	/* If the file is not opened we proceed to open it */
+	if(inode[fileDescriptor].opened == 0){
+		openFile(inode[fileDescriptor].name);
+	}
 
 	/* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
 	if(inode[fileDescriptor].size == 0) return bytesRead; /* Return 0 bytes (empty file) */

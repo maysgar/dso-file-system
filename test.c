@@ -44,6 +44,14 @@ int checkCreateFile();
 int test_removeFile();
 int checkRemoveFile();
 
+/* openFile tests */
+int test_openFile();
+int checkOpenFile();
+
+/* closeFile tests */
+int test_closeFile();
+int checkCloseFile();
+
 
 
 /**
@@ -63,6 +71,11 @@ int test_mkFS(){
 	return 0;
 }
 
+/**
+ * Test all the funtionalities of the method createFile
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
 int test_createFile(){
 	/* Normal execution of createFile */
 	if(testOutput(createFile("test.txt"), "createFile") < 0) {return -1;}
@@ -73,6 +86,11 @@ int test_createFile(){
 	return 0;
 }
 
+/**
+ * Test all the funtionalities of the method removeFile
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
 int test_removeFile(){
 	/* Normal execution of removeFile */
 	if(testOutput(removeFile("test.txt"), "removeFile") < 0) {return -1;}
@@ -96,6 +114,9 @@ int checkCreateFile(){
 		return -1;
 	}
 	if(inodeList[0].inodeArray[0].directBlock != 0){ /* check number of blocks for the data map */
+		return -1;
+	}
+	if(inodeList -> inodeArray[0].opened != 0){ /* check file created is closed */
 		return -1;
 	}
 	/*if(strcmp(inode[0].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2)))) != 0){ // check number of inodes     Cambiar padding
@@ -122,12 +143,87 @@ int checkRemoveFile(){
 	if(inodeList[0].inodeArray[0].directBlock == 44){ /* check number of blocks for the data map */
 		return -1;
 	}
+	if(inode[0].opened != 0){ /* check number of blocks for the data map */
+		return -1;
+	}
 	/*if(strcmp(inode[0].padding, "") != 0){ // check number of inodes     Cambiar padding
 		return -1;
 	}*/
 	if(sb.i_map[0] != 0){
 		return -1;
 	}
+	return 0;
+}
+
+
+/**
+ * Test all the funtionalities of the method openFile
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int test_openFile(){
+	/* Normal execution of openFile */
+	if(testOutput(openFile("test.txt"), "openFile") < 0) {return -1;}
+	/* Check the correct opened values of the superblock in the FS */
+    if(testOutput(checkOpenFile(), "checkOpenFile") < 0) {return -1;}
+
+    printf("\n");
+	return 0;
+}
+
+/**
+ * Checks the selected file is opened correctly
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkOpenFile(){
+	if(strlen("test.txt") > NAME_MAX){ /* Check file name is not larger than 32 characters */
+		return -1;
+	}
+	if(getInodePosition("test.txt") < 0){ /* check the file exists inside the disk */
+		return -1;
+	}
+	if(inode[getInodePosition("test.txt")].opened == 0){ /* check the file is opened */
+		return -1;
+	}
+	/*
+	if(inode[position].ptr != 0){
+		return -1;
+	}
+	*/
+	
+	return 0;
+}
+
+/**
+ * Test all the funtionalities of the method closeFile
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int test_closeFile(){
+	/* Normal execution of closeFile */
+	if(testOutput(closeFile(0), "closeFile") < 0) {return -1;}
+	/* Check the correct assigned values of the superblock in the FS */
+    if(testOutput(checkCloseFile(), "checkCloseFile") < 0) {return -1;}
+
+    printf("\n");
+	return 0;
+}
+
+/**
+ * Checks the selected file is closed correctly
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkCloseFile(){
+
+	if(0 < 0){ /* check the input file descriptor is negative */
+		return -1;
+	}
+	if(inode[0].opened != 0){ /* check the file is closed */
+		return -1;
+	}
+	
 	return 0;
 }
 
