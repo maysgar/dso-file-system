@@ -156,7 +156,7 @@ int createFile(char *fileName)
 
 	int bPos = alloc(); /* get the position of a free data block */
 	inodeList -> inodeArray[position].directBlock = bPos;
-	inodeList -> inodeArray[position].ptr = 0;
+	//inodeList -> inodeArray[position].ptr = 0;
 	strcpy(inodeList -> inodeArray[position].name, fileName);
 	inodeList -> inodeArray[position].size = 0;
 	//strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2))));   Hay que cambiar el padding
@@ -188,7 +188,7 @@ int removeFile(char *fileName)
 		strcpy(inode[position].name, "");        //MIRAR MEMSET()
 		inode[position].size = 0;
 		inode[position].directBlock = 0;
-		inode[position].ptr = 0;
+		//inode[position].ptr = 0;
 		//strcpy(inode[position].padding, "");          Hay que cambiar el padding
 
 		bitmap_setbit(sb.i_map, position, 0);
@@ -217,7 +217,7 @@ int removeFile(char *fileName)
 	that inode in the bitmap is not empty then the file is ready to be openned */
 	if((strcmp(fileName,inode[position].name) == 0) && sb.i_map[position] == 1){
 		/* Set pointer of file to 0 */
-		if(inode[position].ptr > 0) inode[position].ptr = 0;
+		//if(inode[position].ptr > 0) inode[position].ptr = 0;
 		return position; //i is the file descriptor
 	}
  	return -1;
@@ -270,12 +270,12 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 			if(numBytes <= inode[fileDescriptor].size){
 				/* It was read the whole file or partially */
 				bytesRead = numBytes;
-				inode[fileDescriptor].ptr = bytesRead;
+				//inode[fileDescriptor].ptr = bytesRead;
 				numBytesAux = numBytesAux - bytesRead;
 			}
 			else{ /* it has not finished reading, continue looping and update ptr */
 				set_pointer = set_pointer + BLOCK_SIZE; /* It has been read the maximum size of a block */
-				inode[fileDescriptor].ptr = set_pointer;
+				//inode[fileDescriptor].ptr = set_pointer;
 				//TODO: This else me da quebraderos de cabeza. Mirar bien todo el método.
 			}
 		}
@@ -309,10 +309,10 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0) return -1;
 
 	/* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
-	if(inode[fileDescriptor].size == 0) return bytesRead; /* Return 0 bytes (empty file) */
+	if(inode[fileDescriptor].size == 0) return bytesWritten; /* Return 0 bytes (empty file) */
 	else{ //Size is not equal to zero
 		/* Update of the pointer with the bytes to be read */
-		inode[fileDescriptor].ptr = inode[fileDescriptor].ptr + numBytes;
+		//inode[fileDescriptor].ptr = inode[fileDescriptor].ptr + numBytes;
 		bwrite(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block);
 		/* If the size of the file is less than the number of bytes to be written
 		 	 update data blocks for the file... */
@@ -320,6 +320,8 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 			//TODO: Update the data blocks preserving the data disk limits
 		}
 	}
+	//Habra que cambiarlo
+	return -1; 
 }
 
 /*
