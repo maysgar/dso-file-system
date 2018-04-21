@@ -361,7 +361,11 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int lseekFile(int fileDescriptor, long offset, int whence)
 {
-	
+	/* DIAPOS:
+	lseek(fd, newPos)
+	kfd = current->files.fd_array[fd]; 
+	kfd->f_pos = newPos;
+	*/
 	return 0;
 }
 
