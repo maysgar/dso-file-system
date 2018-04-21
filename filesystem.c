@@ -255,6 +255,7 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 {
 	int bytesRead = 0;
 	int numBytesAux = numBytes;
+	int set_pointer = 0;
 	/* If the file descriptor does not exist or no bytes to read*/
 	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0) return -1;
 
@@ -269,9 +270,14 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
 			if(numBytes <= inode[fileDescriptor].size){
 				/* It was read the whole file or partially */
 				bytesRead = numBytes;
+				inode[fileDescriptor].ptr = bytesRead;
 				numBytesAux = numBytesAux - bytesRead;
 			}
-			//else ?
+			else{ /* it has not finished reading, continue looping and update ptr */
+				set_pointer = set_pointer + BLOCK_SIZE; /* It has been read the maximum size of a block */
+				inode[fileDescriptor].ptr = set_pointer;
+				//TODO: This else me da quebraderos de cabeza. Mirar bien todo el método.
+			}
 		}
 		//TODO: guardar en buffer
 	}
@@ -298,15 +304,22 @@ int readFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	ssize_t bytesWritten = 0;
-	while(bytesWritten < numBytes){
-		if(bytesWritten += write(fileDescriptor, buffer, numBytes) < 0){
-			printf("Error when writing in the file\n");
-			return -1;
+	int bytesWritten = 0;
+	/* If the file descriptor does not exist or no bytes to read*/
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0) return -1;
+
+	/* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
+	if(inode[fileDescriptor].size == 0) return bytesRead; /* Return 0 bytes (empty file) */
+	else{ //Size is not equal to zero
+		/* Update of the pointer with the bytes to be read */
+		inode[fileDescriptor].ptr = inode[fileDescriptor].ptr + numBytes;
+		bwrite(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block);
+		/* If the size of the file is less than the number of bytes to be written
+		 	 update data blocks for the file... */
+		if(inode[fileDescriptor].size < numBytes){
+			//TODO: Update the data blocks preserving the data disk limits
 		}
 	}
-	printf("%zd bytes successfully written in the file\n", bytesWritten);
-	return (int)bytesWritten;
 }
 
 /*
@@ -322,11 +335,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int lseekFile(int fileDescriptor, long offset, int whence)
 {
-	if(lseek(fileDescriptor, offset, whence) < 0){
-		printf("Error moving the pointer of file: %d\n", fileDescriptor);
-		return -1;
-	}
-	printf("Seek pointer successfully moved\n");
+	
 	return 0;
 }
 
