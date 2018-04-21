@@ -128,8 +128,9 @@ int mountFS(void)
 int unmountFS(void)
 {
 	/* Free the inodes */
-	for(int i = 0; i < sb.numInodes; i++){
-		memset(&(inode[i]), 0, sizeof(inode_t));
+	for(int i = 0; i < sb.inodesBlocks; i++){
+		memset(&(inodeList[i]), 0, sizeof(inode_block_t));
+  }
 		ifree(i);
 		bfree(i);
 	}
@@ -151,21 +152,27 @@ int createFile(char *fileName)
 	/* Check NF2 */
 	if(strlen(fileName) > NAME_MAX) return -2;
 
-  if(getInodePosition(fileName) > 0) return -1;
+  	if(getInodePosition(fileName) > 0) return -1;
 
 	int position = ialloc(); /* get the position of a free inode */
     if(position < 0) {return -1;} /* error while ialloc */
 
 	int bPos = alloc(); /* get the position of a free data block */
-	inodeList -> inodeArray[position].directBlock = bPos;
+
+	/* know in what block of inodes it is */
+	int aux = position / INODE_PER_BLOCK;
+	position = position % INODE_PER_BLOCK;
+
+	inodeList[aux].inodeArray[position].directBlock = bPos;
 	//inodeList -> inodeArray[position].ptr = 0;
-	strcpy(inodeList -> inodeArray[position].name, fileName);
-	inodeList -> inodeArray[position].size = 0;
+
+  strcpy(inodeList[aux].inodeArray[position].name, fileName);
+	inodeList[aux].inodeArray[position].size = 0;
 	/* We set the new file to closed */
-	inodeList -> inodeArray[position].opened = 0;
+	inodeList[aux].inodeArray[position].opened = 0;
 	//strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*3))));   Hay que cambiar el padding
 
-	if(bwrite(DEVICE_IMAGE,sb.firstInode,buffer_block) == -1) return -3;
+	//if(bwrite(DEVICE_IMAGE,sb.firstInode,buffer_block) == -1) return -3;
 	return 0;
 }
 
@@ -176,25 +183,24 @@ int createFile(char *fileName)
  */
 int removeFile(char *fileName)
 {
-	int position = getInodePosition(fileName);
-
-	/* File does not exist */
-	if(strcmp(inode[position].name,fileName) == -1){
-		return -1;
-	}
-
 	/* Name is too long */
 	if(strlen(fileName) > NAME_MAX){
 		return -2;
 	}
+	/* get the position of the file to be deleted */
+	int position = getInodePosition(fileName);
+	/* know in what block of inodes it is */
+	int aux = position / INODE_PER_BLOCK;
+	position = position % INODE_PER_BLOCK;
 
 	if(position >= 0){
-		if(inode[position].opened == 1){
+ 		if(inodeList[aux].inodeArray[position].opened == 1){
 			closeFile(position);
 		}
-		strcpy(inode[position].name, "");        //MIRAR MEMSET()
-		inode[position].size = 0;
-		inode[position].directBlock = 0;
+		strcpy(inodeList[aux].inodeArray[position].name, "");        //MIRAR MEMSET()
+		inodeList[aux].inodeArray[position].size = 0;
+		inodeList[aux].inodeArray[position].directBlock = 0;
+
 		//inode[position].ptr = 0;
 		//strcpy(inode[position].padding, "");          Hay que cambiar el padding
 
@@ -204,7 +210,6 @@ int removeFile(char *fileName)
 	else{
 		printf("File %s does not exist\n", fileName);
 		return -1;
-
 	}
 }
 
@@ -220,10 +225,16 @@ int removeFile(char *fileName)
  int openFile(char *fileName)
  {
 	int position = getInodePosition(fileName);
+	/* check if the file exists */
+	if(position < 0){ return -1;}
+	 /* know in what block of inodes it is */
+	 int aux = position / INODE_PER_BLOCK;
+	 /* position inside the block */
+	 int bPosition = position % INODE_PER_BLOCK;
 	/* If the file name is the same as the one in the inode and the entry of
 	that inode in the bitmap is not empty then the file is ready to be openned */
-	if((strcmp(fileName,inode[position].name) == 0) && sb.i_map[position] == 1){
-		inode[position].opened = 1;
+	if((strcmp(fileName,inodeList[aux].inodeArray[bPosition].name) == 0) && sb.i_map[position] == 1){
+		inodeList[aux].inodeArray[bPosition].opened = 1;
 		/* Set pointer of file to 0 */
 		//if(inode[position].ptr > 0) inode[position].ptr = 0;
 		return position; //i is the file descriptor
@@ -562,6 +573,7 @@ int getInodePosition(char *fname){
 				/* Return file position */
 				return i;
 			}
+			count++;
 		}
 	}
 	return -1;
