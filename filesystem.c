@@ -366,6 +366,27 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 	kfd = current->files.fd_array[fd]; 
 	kfd->f_pos = newPos;
 	*/
+
+	/* If the file descriptor does not exist or no bytes to read*/
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || offset <= 0) return -1;
+
+	/* Modify the position from the current one */
+	else if(whence == FS_SEEK_CUR){
+
+	}
+	/* Modify the position from the beginning of the file */
+	else if(whence == FS_SEEK_BEGIN){
+
+	}
+	/* Modify the position from the end of the file */
+	else if(whence == FS_SEEK_END){
+
+	}
+	else{
+		/* The whence has a wrong value */
+		return -1;
+	}
+
 	return 0;
 }
 
