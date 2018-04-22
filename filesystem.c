@@ -157,15 +157,16 @@ int createFile(char *fileName)
     if(position < 0) {return -1;} /* error while ialloc */
 
 	int bPos = alloc(); /* get the position of a free data block */
+	if(bPos < 0) {return -1;} /* error while alloc */
 
 	/* know in what block of inodes it is */
 	int aux = position / INODE_PER_BLOCK;
 	position = position % INODE_PER_BLOCK;
 
 	inodeList[aux].inodeArray[position].directBlock = bPos;
-	inodeList -> inodeArray[position].ptr = 0;
+	inodeList[aux].inodeArray[position].ptr = 0;
 
-  strcpy(inodeList[aux].inodeArray[position].name, fileName);
+  	strcpy(inodeList[aux].inodeArray[position].name, fileName);
 	inodeList[aux].inodeArray[position].size = 0;
 	/* We set the new file to closed */
 	inodeList[aux].inodeArray[position].opened = 0;
