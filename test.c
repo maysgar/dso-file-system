@@ -39,6 +39,8 @@ int testOutput(int ret, char * msg);
 /* createFile tests */
 int test_createFile();
 int checkCreateFile();
+int checkMaxName();
+int checkCreateAgain();
 
 /* removeFile tests */
 int test_removeFile();
@@ -81,7 +83,10 @@ int test_createFile(){
 	if(testOutput(createFile("test.txt"), "createFile") < 0) {return -1;}
 	/* Check the correct assigned values of the superblock in the FS */
     if(testOutput(checkCreateFile(), "checkCreateFile") < 0) {return -1;}
-
+	/* Check the correct error handling when the length of the file name is bigger than the maximum */
+	if(testOutput(checkMaxName(), "checkMaxName") < 0) {return -1;}
+	/* Check the correct error handling when the file to be created already exists */
+	if(testOutput(checkCreateAgain(), "checkCreateAgain") < 0) {return -1;}
     printf("\n");
 	return 0;
 }
@@ -126,7 +131,31 @@ int checkCreateFile(){
 		return -1;
 	}
 	return 0;
-}	
+}
+
+/**
+ * Checks the correct error handling when the name of the file to be created is bigger thant the maximum
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkMaxName(){
+	if(createFile("This string is bigger than the allowed maximum size for a file name") != -2) {
+		return -1; /* createFile does not  check this case */
+	}
+	return 0;
+}
+
+/**
+ * Checks the correct error handling when the when the file to be created already exists
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkCreateAgain(){
+	if( (createFile("test.txt")) != -1){
+		return -1; /* createFile does not  check this case */
+	}
+	return 0;
+}
 
 /**
  * Checks the correct creation of files inside "disk.data"
