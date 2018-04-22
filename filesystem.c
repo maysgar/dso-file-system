@@ -151,7 +151,7 @@ int createFile(char *fileName)
 	/* Check NF2 */
 	if(strlen(fileName) > NAME_MAX) return -2;
 
-  	if(getInodePosition(fileName) > 0) return -1;
+  	if(getInodePosition(fileName) >= 0) return -1;
 
 	int position = ialloc(); /* get the position of a free inode */
     if(position < 0) {return -1;} /* error while ialloc */
