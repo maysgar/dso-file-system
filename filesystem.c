@@ -53,7 +53,7 @@ int mkFS(long deviceSize)
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
 	/* Number of the first inode */
-  	sb.firstInode = 2; /* the first inode is after the superblock */
+	sb.firstInode = 2; /* the first inode is after the superblock */
 
 	/* calculate the number of inode_block_t that we need */
 	sb.inodesBlocks = (int) (INODE_MAX_NUMBER / INODE_PER_BLOCK);
@@ -204,7 +204,7 @@ int removeFile(char *fileName)
 		inodeList[aux].inodeArray[position].size = 0;
 		inodeList[aux].inodeArray[position].directBlock = 0;
 
-		//inode[position].ptr = 0;
+		inodeList[aux].inodeArray[position].ptr = 0;
 
 		bitmap_setbit(sb.i_map, position, 0);
 		return 0;
@@ -237,7 +237,7 @@ int removeFile(char *fileName)
 	if((strcmp(fileName,inodeList[aux].inodeArray[bPosition].name) == 0) && sb.i_map[position] == 1){
 		inodeList[aux].inodeArray[bPosition].opened = 1;
 		/* Set pointer of file to 0 */
-		//if(inode[position].ptr > 0) inode[position].ptr = 0;
+		if(inodeList[aux].inodeArray[bPosition].ptr > 0) inodeList[aux].inodeArray[bPosition].ptr = 0;
 		return position; //i is the file descriptor
 	}
  	return -1;
@@ -254,7 +254,14 @@ int closeFile(int fileDescriptor)
 	if(fileDescriptor < 0){
 		return -1;
 	}
-	inode[fileDescriptor].opened = 0;
+
+	/* know in what block of inodes it is */
+	int aux = fileDescriptor / INODE_PER_BLOCK;
+	/* position inside the block */
+	int bPosition = fileDescriptor % INODE_PER_BLOCK;
+
+	//printf("File closed successfully\n");
+	inodeList[aux].inodeArray[bPosition].opened = 0;
 	return 0;
 }
 
@@ -371,26 +378,25 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
  */
 int lseekFile(int fileDescriptor, long offset, int whence)
 {
-	/* DIAPOS:
-	lseek(fd, newPos)
-	kfd = current->files.fd_array[fd];
-	kfd->f_pos = newPos;
-	*/
+	/* know in what block of inodes it is */
+	int aux = fileDescriptor / INODE_PER_BLOCK;
+	/* position inside the block */
+	int bPosition = fileDescriptor % INODE_PER_BLOCK;
 
-	/* If the file descriptor does not exist or no bytes to read*/
-	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || offset <= 0) return -1;
-
+	/* If the file descriptor does not exist or no bytes to read or the offset is larger than the file size */
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || offset <= 0 || offset > inodeList[aux].inodeArray[bPosition].size ) return -1;
+	
 	/* Modify the position from the current one */
-	else if(whence == FS_SEEK_CUR){
-
+	if(whence == FS_SEEK_CUR){
+		inodeList[aux].inodeArray[bPosition].ptr = offset;
 	}
 	/* Modify the position from the beginning of the file */
 	else if(whence == FS_SEEK_BEGIN){
-
+		inodeList[aux].inodeArray[bPosition].ptr = 0;
 	}
 	/* Modify the position from the end of the file */
 	else if(whence == FS_SEEK_END){
-
+		inodeList[aux].inodeArray[bPosition].ptr = inodeList[aux].inodeArray[bPosition].size;
 	}
 	else{
 		/* The whence has a wrong value */
