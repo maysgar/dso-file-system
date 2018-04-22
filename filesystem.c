@@ -62,7 +62,7 @@ int mkFS(long deviceSize)
 
     /* Number of the first data block */
     sb.firstDataBlock = sb.firstInode + sb.inodesBlocks; /* after the last inode block */
-
+	
 	/* memory for the list of inodes */
 	inodeList = malloc(sizeof(inode_block_t) * sb.inodesBlocks);
 

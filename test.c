@@ -211,7 +211,7 @@ int checkRemoveFile(){
 	if(inodeList[0].inodeArray[0].directBlock == 44){ /* check number of blocks for the data map */
 		return -1;
 	}
-	if(inode[0].opened != 0){ /* check number of blocks for the data map */
+	if(inodeList[0].inodeArray[0].opened != 0){ /* check number of blocks for the data map */
 		return -1;
 	}
 	if(sb.i_map[0] != 0){
@@ -285,7 +285,7 @@ int checkCloseFile(){
 	if(0 < 0){ /* check the input file descriptor is negative */
 		return -1;
 	}
-	if(inode[0].opened != 0){ /* check the file is closed */
+	if(inodeList[0].inodeArray[0].opened != 0){ /* check the file is closed */
 		return -1;
 	}
 	
