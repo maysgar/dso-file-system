@@ -46,10 +46,11 @@ int checkMaxFiles();
 /* removeFile tests */
 int test_removeFile();
 int checkRemoveFile();
+int checkWrongRemove();
 
 /* openFile tests */
 int test_openFile();
-int checkOpenFile();
+int checkMaxNameOpen();
 
 /* closeFile tests */
 int test_closeFile();
@@ -105,6 +106,8 @@ int test_removeFile(){
 	if(testOutput(removeFile("test.txt"), "removeFile") < 0) {return -1;}
 	/* Check the correct assigned values of the superblock in the FS */
     if(testOutput(checkRemoveFile(), "checkRemoveFile") < 0) {return -1;}
+	/* Check the correct error handling when the file to be removed does not exist*/
+	if(testOutput(checkWrongRemove(), "checkWrongRemove") < 0) {return -1;}
 
 	printf("\n");
 	return 0;
@@ -212,6 +215,18 @@ int checkRemoveFile(){
 }
 
 /**
+ *  Check the correct error handling when the file to be removed does not exist
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkWrongRemove(){
+	if(removeFile("Wrong File") >= 0){
+		return -1;
+	}
+	return 0;
+}
+
+/**
  * Test all the funtionalities of the method openFile
  *
  * @return 0 if all the tests are correct and -1 otherwise
@@ -220,33 +235,22 @@ int test_openFile(){
 	/* Normal execution of openFile */
 	if(testOutput(openFile("test.txt"), "openFile") < 0) {return -1;}
 	/* Check the correct opened values of the superblock in the FS */
-    if(testOutput(checkOpenFile(), "checkOpenFile") < 0) {return -1;}
+    if(testOutput(checkMaxNameOpen(), "checkMaxNameOpen") < 0) {return -1;}
 
     printf("\n");
 	return 0;
 }
 
 /**
- * Checks the selected file is opened correctly
+ * Checks the correct error handling when the name of the file to be opened is bigger thant the maximum
  *
  * @return 0 if all the tests are correct and -1 otherwise
  */
-int checkOpenFile(){
-	if(strlen("test.txt") > NAME_MAX){ /* Check file name is not larger than 32 characters */
+int checkMaxNameOpen(){
+	/* Check file name is not larger than 32 characters */
+	if(openFile("This string is bigger than the allowed maximum size for a file name") >= 0){
 		return -1;
 	}
-	if(getInodePosition("test.txt") < 0){ /* check the file exists inside the disk */
-		return -1;
-	}
-	if(inodeList[0].inodeArray[getInodePosition("test.txt")].opened == 0){ /* check the file is opened */
-		return -1;
-	}
-	/*
-	if(inode[position].ptr != 0){
-		return -1;
-	}
-	*/
-	
 	return 0;
 }
 

@@ -52,8 +52,8 @@ int mkFS(long deviceSize)
 	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
-  /* Number of the first inode */
-  sb.firstInode = 2; /* the first inode is after the superblock */
+	/* Number of the first inode */
+  	sb.firstInode = 2; /* the first inode is after the superblock */
 
 	/* calculate the number of inode_block_t that we need */
 	sb.inodesBlocks = (int) (INODE_MAX_NUMBER / INODE_PER_BLOCK);
@@ -78,9 +78,9 @@ int mkFS(long deviceSize)
 		bitmap_setbit(sb.b_map, i, 0); /* free */
 	}
 
-	/* Free the inodes */
-	for(int i = 0; i < sb.numInodes; i++){
-		memset(&(inode[i]), 0, sizeof(inode_t));
+	/* Free the inode blocks */
+	for(int i = 0; i < sb.inodesBlocks; i++){
+		memset(&(inodeList[i]), 0, sizeof(inode_block_t));
 	}
 
 	/* write the default file system into disk */
@@ -131,6 +131,7 @@ int unmountFS(void)
 	for(int i = 0; i < sb.inodesBlocks; i++){
 		memset(&(inodeList[i]), 0, sizeof(inode_block_t));
   	}
+  	/* Free  */
   	for(int i = 0; i < sb.numInodes; i++){
 		ifree(i);
 		bfree(i);
@@ -199,18 +200,16 @@ int removeFile(char *fileName)
  		if(inodeList[aux].inodeArray[position].opened == 1){
 			closeFile(position);
 		}
-		strcpy(inodeList[aux].inodeArray[position].name, "");        //MIRAR MEMSET()
+		strcpy(inodeList[aux].inodeArray[position].name, "");
 		inodeList[aux].inodeArray[position].size = 0;
 		inodeList[aux].inodeArray[position].directBlock = 0;
 
 		//inode[position].ptr = 0;
-		//strcpy(inode[position].padding, "");          Hay que cambiar el padding
 
 		bitmap_setbit(sb.i_map, position, 0);
 		return 0;
 	}
 	else{
-		printf("File %s does not exist\n", fileName);
 		return -1;
 	}
 }
@@ -253,10 +252,8 @@ int closeFile(int fileDescriptor)
 {
 	//PDF: when the file descriptor is closed, all file blocks are flushed to disk
 	if(fileDescriptor < 0){
-		printf("Wrong file descriptor\n");
 		return -1;
 	}
-	//printf("File closed successfully\n");
 	inode[fileDescriptor].opened = 0;
 	return 0;
 }
@@ -521,7 +518,11 @@ int ialloc(void){
     for(int i = 0; i < sb.numInodes; i++){
 		if(bitmap_getbit(sb.i_map, i) == 0){ /* check if the position is free */
 			bitmap_setbit(sb.i_map, i, 1); /* inode busy */
-            memset(&(inode[i]), 0, sizeof(inode_t) ); /* default values to the inode */
+			/* know in what block of inodes it is */
+			int position = i;
+			int aux = position / INODE_PER_BLOCK;
+			position = position % INODE_PER_BLOCK;
+            memset(&(inodeList[aux].inodeArray[position]), 0, sizeof(inode_t) ); /* default values to the inode */
             return i; /* return the position of the inode */
         }
     }
@@ -630,7 +631,10 @@ int bmap(int inode_position, int offset){
 
 	/* return the inode block */
 	if(offset < SIZE_OF_BLOCK){
-		return inode[inode_position].directBlock;
+		/* know in what block of inodes it is */
+		int aux = inode_position / INODE_PER_BLOCK;
+		inode_position = inode_position % INODE_PER_BLOCK;
+		return inodeList[aux].inodeArray[inode_position].directBlock;
 	}
 	return -1;
 }
