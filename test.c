@@ -247,18 +247,9 @@ int checkMakeFS(){
 	if(sb.firstInode != ( 2 )){ /* check the correct position of the first inode */
 		return -1;
 	}
-	if(sb.inodesBlocks != (int) ((INODE_MAX_NUMBER / INODE_PER_BLOCK)+1)){
-		return -1;
-	}
 	if(sb.firstDataBlock != ( sb.firstInode + sb.inodesBlocks )){ /* check the correct position of the first data block */
 		return -1;
 	}
-	for(int i = 0; i < sb.numInodes; i++){
-		if(sb.i_map[i] != 0 || sb.b_map[i] != 0){
-			return -1;
-		}
-	}
-
 	return 0;
 }
 

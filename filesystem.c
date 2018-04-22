@@ -52,8 +52,8 @@ int mkFS(long deviceSize)
 	sb.numInodes = INODE_MAX_NUMBER; /* Stated in the PDF */
 	/* Set the size of the disk */
 	sb.deviceSize = deviceSizeInt;
-	/* Number of the first inode */
-	sb.firstInode = 2; /* the first inode is after the superblock */
+  /* Number of the first inode */
+  sb.firstInode = 2; /* the first inode is after the superblock */
 
 	/* calculate the number of inode_block_t that we need */
 	sb.inodesBlocks = (int) (INODE_MAX_NUMBER / INODE_PER_BLOCK);
@@ -151,7 +151,7 @@ int createFile(char *fileName)
 	/* Check NF2 */
 	if(strlen(fileName) > NAME_MAX) return -2;
 
-  	if(getInodePosition(fileName) >= 0) return -1;
+  	if(getInodePosition(fileName) > 0) return -1;
 
 	int position = ialloc(); /* get the position of a free inode */
     if(position < 0) {return -1;} /* error while ialloc */
@@ -165,7 +165,7 @@ int createFile(char *fileName)
 	inodeList[aux].inodeArray[position].directBlock = bPos;
 	inodeList -> inodeArray[position].ptr = 0;
 
-  	strcpy(inodeList[aux].inodeArray[position].name, fileName);
+  strcpy(inodeList[aux].inodeArray[position].name, fileName);
 	inodeList[aux].inodeArray[position].size = 0;
 	/* We set the new file to closed */
 	inodeList[aux].inodeArray[position].opened = 0;
@@ -234,8 +234,6 @@ int removeFile(char *fileName)
 	that inode in the bitmap is not empty then the file is ready to be openned */
 	if((strcmp(fileName,inodeList[aux].inodeArray[bPosition].name) == 0) && sb.i_map[position] == 1){
 		inodeList[aux].inodeArray[bPosition].opened = 1;
-		/* Set pointer of file to 0 */
-		inodeList[aux].inodeArray[bPosition].position = 0;
 		/* Set pointer of file to 0 */
 		//if(inode[position].ptr > 0) inode[position].ptr = 0;
 		return position; //i is the file descriptor
@@ -379,20 +377,20 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 	kfd->f_pos = newPos;
 	*/
 
-	/* If the file descriptor does not exist or no bytes to read or the offset is larger than the file size */
-	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || offset <= 0 || offset > inode[fileDescriptor].size ) return -1;
+	/* If the file descriptor does not exist or no bytes to read*/
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || offset <= 0) return -1;
 
 	/* Modify the position from the current one */
-	if(whence == FS_SEEK_CUR){
-		inode[fileDescriptor].position = offset;
+	else if(whence == FS_SEEK_CUR){
+
 	}
 	/* Modify the position from the beginning of the file */
 	else if(whence == FS_SEEK_BEGIN){
-		inode[fileDescriptor].position = 0;
+
 	}
 	/* Modify the position from the end of the file */
 	else if(whence == FS_SEEK_END){
-		inode[fileDescriptor].position = inode[fileDescriptor].size;
+
 	}
 	else{
 		/* The whence has a wrong value */
@@ -480,7 +478,7 @@ void printSuperBlock(superblock_t superBlock){
     if(printf("Total disk space: %d\n", superBlock.deviceSize) < 0){
         printf("Could not print Total disk space");
     }
-    if(printf("Padding field: %s\n", superBlock.padding) < 0){
+    if(printf("Padding field: %d\n\n", SUPERBLOCK_PADDING) < 0){
         printf("Could not print Padding field:");
     }
 }
