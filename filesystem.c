@@ -282,6 +282,7 @@ int closeFile(int fileDescriptor)
   int bytesRead = 0;
   int aux = fileDescriptor / INODE_PER_BLOCK;
   int position = fileDescriptor % INODE_PER_BLOCK;
+  int pointer = inodeList[aux].inodeArray[position].ptr;
   char buffer_r[numBytes];
 
   /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
