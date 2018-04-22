@@ -277,53 +277,48 @@ int closeFile(int fileDescriptor)
  *
  * @return	Number of bytes properly read, -1 in case of error.
  */
-int readFile(int fileDescriptor, void *buffer, int numBytes)
-{
-	int bytesRead = 0;
-	int pointer = inode[fileDescriptor].ptr;
-	//int pointer_init = inode[fileDescriptor].ptr;
+ int readFile(int fileDescriptor, void *buffer, int numBytes)
+ {
+  int bytesRead = 0;
+  int aux = fileDescriptor / INODE_PER_BLOCK;
+  int position = fileDescriptor % INODE_PER_BLOCK;
+  char buffer_r[numBytes];
 
-	/* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
-		to the end of the file or if the inode is unused, error */
-	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0 ||
-		 pointer == inode[fileDescriptor].size || sb.i_map[fileDescriptor] == 0){
-		return -1;
-	}
+  /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
+    to the end of the file or if the inode is unused, error */
+  if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0 ||
+     pointer == inodeList[aux].inodeArray[position].size || sb.i_map[fileDescriptor] == 0){
+    return -1;
+  }
 
-	/* If the file is not opened we proceed to open it */
-	if(inode[fileDescriptor].opened == 0){
-		openFile(inode[fileDescriptor].name);
-	}
+  /* If the file is not opened we proceed to open it */
+  if(inodeList[aux].inodeArray[position].opened == 0){
+    openFile(inodeList[aux].inodeArray[position].name);
+  }
 
-	/* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
-	if(inode[fileDescriptor].size == 0) return bytesRead; /* Return 0 bytes (empty file) */
-	/* Size is not equal to zero */
-	// else{
-	// 	/* Repeat the bread operation until "numBytes go to zero" */
-	// 	while(numBytes != bytesRead){
-	// 		/* Read the inode until the numBytes has been read*/
-	// 		if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block) < 0) return -1;
-	// 		/* If the number of bytes to be read plus the bytes to be read are less than the size
-	// 		of the file then proceed to read as normal until the bytes to read have been read. */
-	// 		if(pointer + numBytes < inode[fileDescriptor].size){
-	// 			inode[fileDescriptor].ptr += ; /* Update pointer */
-	// 			bytesRead += ;
-	// 		}
-	// 		/* If the bytes that are left to be read, exceed the file size then... */
-	// 		else{
-	// 			memcpy(buffer, &(buffer_b[pointer]), inode[fileDescriptor].size - pointer);
-	// 			/* Update pointer to the end of the file even if there are more bytes to read,
-	// 			file size is exceeded */
-	// 			inode[fileDescriptor].ptr = inode[fileDescriptor].size;
-	// 			return inode[fileDescriptor].size - pointer_init;
-	// 		}
-	// 		char buffer_b[bytesRead];
-	// 		memcpy(buffer, buffer_b, numBytes); /* Copy whole bytes read to buffer */
-	// 		return bytesRead;
-	// 	}
-	// }
-	return -1;
-}
+  /* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
+  if(inodeList[aux].inodeArray[position].size == 0) return 0; /* Return 0 bytes (empty file) */
+  /* Size is not equal to zero */
+  else{
+    /* If the number of bytes to be read plus the bytes to be read are less than the size
+    of the file then proceed to read as normal until the bytes to read have been read. */
+    if(pointer + numBytes < inodeList[aux].inodeArray[position].size){
+      /* Read the inode until the numBytes has been read*/
+      if(bread(DEVICE_IMAGE,sb.firstInode+position,buffer_r) < 0) return -1;
+      pointer += numBytes; /* Update pointer */
+    }
+    else{
+      char buffer_r2[inodeList[aux].inodeArray[position].size-pointer];
+      if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_r2) < 0) return -1;
+      pointer = inodeList[aux].inodeArray[position].size;
+      bytesRead = inodeList[aux].inodeArray[position].size-pointer;
+    }
+    char buffer_b[bytesRead];
+    memcpy(buffer, buffer_b, numBytes); /* Copy whole bytes read to buffer */
+    return bytesRead;
+  }
+  return -1;
+ }
 
 /*
  * @brief	Writes a number of bytes from a buffer and into a file.
