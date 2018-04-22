@@ -21,7 +21,6 @@
 #include "blocks_cache.h"
 
 superblock_t sb; /* superblock */
-inode_t * inode; /* array of inodes */
 inode_block_t * inodeList; /* Struct of inodes */
 char buffer_block[2048];
 
@@ -282,6 +281,7 @@ int closeFile(int fileDescriptor)
   int bytesRead = 0;
   int auxRead = numBytes;
   int aux = fileDescriptor / INODE_PER_BLOCK;
+  int i = inodeList[aux].inodeArray[position].directBlock;
   int position = fileDescriptor % INODE_PER_BLOCK;
   int pointer = inodeList[aux].inodeArray[position].ptr;
 
@@ -306,8 +306,9 @@ int closeFile(int fileDescriptor)
     if(pointer + numBytes < inodeList[aux].inodeArray[position].size){
       /* Read the inode until the numBytes has been read*/
       while(auxRead < 0){
-        if(bread(DEVICE_IMAGE,sb.firstInode+position,buffer_block) < 0) return -1;
+        if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor+i,buffer_block) < 0) return -1;
 	auxRead -= BLOCK_SIZE;
+	i++;
       } 
       pointer += numBytes; /* Update pointer */
     }
