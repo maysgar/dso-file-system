@@ -478,7 +478,7 @@ void printSuperBlock(superblock_t superBlock){
     if(printf("Total disk space: %d\n", superBlock.deviceSize) < 0){
         printf("Could not print Total disk space");
     }
-    if(printf("Padding field: %s\n", superBlock.padding) < 0){
+    if(printf("Padding field: %d\n\n", SUPERBLOCK_PADDING) < 0){
         printf("Could not print Padding field:");
     }
 }
