@@ -280,7 +280,7 @@ int closeFile(int fileDescriptor)
  int readFile(int fileDescriptor, void *buffer, int numBytes)
  {
   int bytesRead = 0;
-  int auxRead = 0;
+  int auxRead = numBytes;
   int aux = fileDescriptor / INODE_PER_BLOCK;
   int position = fileDescriptor % INODE_PER_BLOCK;
   int pointer = inodeList[aux].inodeArray[position].ptr;
