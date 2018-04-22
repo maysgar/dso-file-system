@@ -63,9 +63,6 @@ int mkFS(long deviceSize)
     /* Number of the first data block */
     sb.firstDataBlock = sb.firstInode + sb.inodesBlocks; /* after the last inode block */
 
-	/* memory for the inodes */
-	inode = malloc(sizeof(inode_t) * sb.numInodes);
-
 	/* memory for the list of inodes */
 	inodeList = malloc(sizeof(inode_block_t) * sb.inodesBlocks);
 
@@ -292,9 +289,11 @@ int closeFile(int fileDescriptor)
   int bytesRead = 0;
   int auxRead = numBytes;
   int aux = fileDescriptor / INODE_PER_BLOCK;
-  int i = inodeList[aux].inodeArray[position].directBlock;
   int position = fileDescriptor % INODE_PER_BLOCK;
   int pointer = inodeList[aux].inodeArray[position].ptr;
+  int i = inodeList[aux].inodeArray[position].directBlock;
+
+
 
   /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
     to the end of the file or if the inode is unused, error */
@@ -324,7 +323,6 @@ int closeFile(int fileDescriptor)
       pointer += numBytes; /* Update pointer */
     }
     else{
-      char buffer_r2[inodeList[aux].inodeArray[position].size-pointer];
       if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block) < 0) return -1;
       pointer = inodeList[aux].inodeArray[position].size;
       bytesRead = inodeList[aux].inodeArray[position].size-pointer;
@@ -333,7 +331,6 @@ int closeFile(int fileDescriptor)
     memcpy(buffer, buffer_b, numBytes); /* Copy whole bytes read to buffer */
     return bytesRead;
   }
-  return -1;
  }
 
 /*
