@@ -39,14 +39,18 @@ int testOutput(int ret, char * msg);
 /* createFile tests */
 int test_createFile();
 int checkCreateFile();
+int checkMaxName();
+int checkCreateAgain();
+int checkMaxFiles();
 
 /* removeFile tests */
 int test_removeFile();
 int checkRemoveFile();
+int checkWrongRemove();
 
 /* openFile tests */
 int test_openFile();
-int checkOpenFile();
+int checkMaxNameOpen();
 
 /* closeFile tests */
 int test_closeFile();
@@ -81,7 +85,12 @@ int test_createFile(){
 	if(testOutput(createFile("test.txt"), "createFile") < 0) {return -1;}
 	/* Check the correct assigned values of the superblock in the FS */
     if(testOutput(checkCreateFile(), "checkCreateFile") < 0) {return -1;}
-
+	/* Check the correct error handling when the length of the file name is bigger than the maximum */
+	if(testOutput(checkMaxName(), "checkMaxName") < 0) {return -1;}
+	/* Check the correct error handling when the file to be created already exists */
+	if(testOutput(checkCreateAgain(), "checkCreateAgain") < 0) {return -1;}
+	/* Check the correct error handling when the maximum number of files in the FS is achieved */
+	if(testOutput(checkMaxFiles(), "checkMaxFiles") < 0) {return -1;}
     printf("\n");
 	return 0;
 }
@@ -92,10 +101,13 @@ int test_createFile(){
  * @return 0 if all the tests are correct and -1 otherwise
  */
 int test_removeFile(){
+	createFile("test.txt");
 	/* Normal execution of removeFile */
 	if(testOutput(removeFile("test.txt"), "removeFile") < 0) {return -1;}
 	/* Check the correct assigned values of the superblock in the FS */
     if(testOutput(checkRemoveFile(), "checkRemoveFile") < 0) {return -1;}
+	/* Check the correct error handling when the file to be removed does not exist*/
+	if(testOutput(checkWrongRemove(), "checkWrongRemove") < 0) {return -1;}
 
 	printf("\n");
 	return 0;
@@ -126,7 +138,57 @@ int checkCreateFile(){
 		return -1;
 	}
 	return 0;
-}	
+}
+
+/**
+ * Checks the correct error handling when the name of the file to be created is bigger thant the maximum
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkMaxName(){
+	if(createFile("This string is bigger than the allowed maximum size for a file name") != -2) {
+		return -1; /* createFile does not  check this case */
+	}
+	return 0;
+}
+
+/**
+ * Checks the correct error handling when the when the file to be created already exists
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkCreateAgain(){
+	if( (createFile("test.txt")) != -1){
+		return -1; /* createFile does not  check this case */
+	}
+	return 0;
+}
+
+/**
+ * Checks the correct error handling when the maximum number of files in the FS is achieved
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkMaxFiles(){
+	/* start with a new FS */
+	if(unmountFS() < 0){
+		return -1; /* Error in the unmount */
+	}
+	for(int i = 0; i < INODE_MAX_NUMBER; i++){
+		char aux = i + '0';
+		char name [10];
+		strcpy(name, &aux);
+		if(createFile(name) < 0) { /* create all the files */
+			return -1; /* error before arriving to the maximum number of files */
+		}
+	}
+	/* Trying to create a file when there is no more space for it */
+	if(createFile("Wrong file") >= 0){
+		return -1; /* file created */
+	}
+	unmountFS(); /* unmount the FS  */
+	return 0;
+}
 
 /**
  * Checks the correct creation of files inside "disk.data"
@@ -146,10 +208,19 @@ int checkRemoveFile(){
 	if(inode[0].opened != 0){ /* check number of blocks for the data map */
 		return -1;
 	}
-	/*if(strcmp(inode[0].padding, "") != 0){ // check number of inodes     Cambiar padding
-		return -1;
-	}*/
 	if(sb.i_map[0] != 0){
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ *  Check the correct error handling when the file to be removed does not exist
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkWrongRemove(){
+	if(removeFile("Wrong File") >= 0){
 		return -1;
 	}
 	return 0;
@@ -164,33 +235,22 @@ int test_openFile(){
 	/* Normal execution of openFile */
 	if(testOutput(openFile("test.txt"), "openFile") < 0) {return -1;}
 	/* Check the correct opened values of the superblock in the FS */
-    if(testOutput(checkOpenFile(), "checkOpenFile") < 0) {return -1;}
+    if(testOutput(checkMaxNameOpen(), "checkMaxNameOpen") < 0) {return -1;}
 
     printf("\n");
 	return 0;
 }
 
 /**
- * Checks the selected file is opened correctly
+ * Checks the correct error handling when the name of the file to be opened is bigger thant the maximum
  *
  * @return 0 if all the tests are correct and -1 otherwise
  */
-int checkOpenFile(){
-	if(strlen("test.txt") > NAME_MAX){ /* Check file name is not larger than 32 characters */
+int checkMaxNameOpen(){
+	/* Check file name is not larger than 32 characters */
+	if(openFile("This string is bigger than the allowed maximum size for a file name") >= 0){
 		return -1;
 	}
-	if(getInodePosition("test.txt") < 0){ /* check the file exists inside the disk */
-		return -1;
-	}
-	if(inodeList[0].inodeArray[getInodePosition("test.txt")].opened == 0){ /* check the file is opened */
-		return -1;
-	}
-	/*
-	if(inode[position].ptr != 0){
-		return -1;
-	}
-	*/
-	
 	return 0;
 }
 

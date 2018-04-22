@@ -53,18 +53,18 @@ typedef struct{
 
 /*
  * Size of inode_t:
- * shorts: 1
- * Ints: 3
+ * shorts: 2
+ * Ints: 2
  * Chars: NAME_MAX
  */
-  #define INODE_SIZE (1 * 2) + (3 * 4) + (NAME_MAX)  /* Size of an inode in bytes */
+  #define INODE_SIZE (2 * 2) + (2 * 4) + (NAME_MAX)  /* Size of an inode in bytes */
 
 typedef struct{
     char name[NAME_MAX];                /* file name */
     unsigned int size;                  /* Current file size in Bytes */
     unsigned int directBlock;           /* Direct block number */
     unsigned short opened;              /* To know if a file is opened or closed */  /* Yo creo que se podría poder un char broooos */
-    unsigned int ptr;                   /* Gabo explicame que es esto por favor */
+    unsigned short ptr;
 } inode_t;
 
 /*
