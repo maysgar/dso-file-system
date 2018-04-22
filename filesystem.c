@@ -130,9 +130,11 @@ int unmountFS(void)
 	/* Free the inode blocks */
 	for(int i = 0; i < sb.inodesBlocks; i++){
 		memset(&(inodeList[i]), 0, sizeof(inode_block_t));
+  	}
+  	for(int i = 0; i < sb.numInodes; i++){
 		ifree(i);
 		bfree(i);
-  	}
+	}
     return 0;
 }
 
