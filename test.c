@@ -56,6 +56,12 @@ int checkMaxNameOpen();
 int test_closeFile();
 int checkCloseFile();
 
+/* lseek tests */
+int test_lseek();
+int checkBigLseek();
+int checkWhenceLseek();
+int checkNegativeLseek();
+int checkNoFileLseek();
 
 
 /**
@@ -286,6 +292,78 @@ int checkCloseFile(){
 	return 0;
 }
 
+
+/**
+ * Test all the funtionalities of the method lseek
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int test_lseek(){
+	/* Normal execution of lseek */
+	inodeList[0].inodeArray[0].size = 20;
+	if(testOutput(lseekFile(0, -5, FS_SEEK_BEGIN), "lseek") < 0) {return -1;}
+	if(testOutput(checkBigLseek(), "checkBigLseek") < 0) {return -1;}
+	if(testOutput(checkNegativeLseek(), "checkNegativeLseek") < 0) {return -1;}
+	if(testOutput(checkWhenceLseek(), "checkWhenceLseek") < 0) {return -1;}
+	if(testOutput(checkNoFileLseek(), "checkNoFileLseek") < 0) {return -1;}
+
+
+    printf("\n");
+	return 0;
+}
+
+/**
+ * Test case where the file pointer is moved more than than the end of the file
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkBigLseek(){
+	if(lseek(0, 25, FS_SEEK_BEGIN) > 0){
+		return -1;
+	}
+	return 0;
+	
+}
+
+/**
+ * Test case where the whence has a wrong value
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkWhenceLseek(){
+	if(lseek(0, 2, 4) > 0){
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * Test case where the file pointer is moved before than the beginning of the file
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkNegativeLseek(){
+	if(lseek(0, -25, FS_SEEK_CUR) > 0){
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * Test case where the file pointer does not correspond to an existing file
+ *
+ * @return 0 if all the tests are correct and -1 otherwise
+ */
+int checkNoFileLseek(){
+	if(lseek(2, 2, FS_SEEK_CUR) > 0){
+		return -1;
+	}
+	return 0;
+
+}
+
+
+
 /**
  * Checks the correct assigning of values to the superblock of the FS
  *
@@ -463,7 +541,14 @@ int main() {
 	/*** test for opening a file ***/
 	test_openFile();
 
-	/*** test for opening a file ***/
+	unmountFS();
+	createFile("text.txt");
+	openFile("text.txt");
+
+	/*** test for moving the pointer of a file ***/
+	test_lseek();
+
+	/*** test for closing a file ***/
 	test_closeFile();
 
 	return 0;

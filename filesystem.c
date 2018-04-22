@@ -231,6 +231,12 @@ int removeFile(char *fileName)
 	 int aux = position / INODE_PER_BLOCK;
 	 /* position inside the block */
 	 int bPosition = position % INODE_PER_BLOCK;
+
+	/* If the file is already opened */
+	if(inodeList[aux].inodeArray[bPosition].opened == 1){
+		return -1;
+	}
+
 	/* If the file name is the same as the one in the inode and the entry of
 	that inode in the bitmap is not empty then the file is ready to be openned */
 	if((strcmp(fileName,inodeList[aux].inodeArray[bPosition].name) == 0) && sb.i_map[position] == 1){
@@ -258,6 +264,11 @@ int closeFile(int fileDescriptor)
 	int aux = fileDescriptor / INODE_PER_BLOCK;
 	/* position inside the block */
 	int bPosition = fileDescriptor % INODE_PER_BLOCK;
+
+	/* If the file is already closed */
+	if(inodeList[aux].inodeArray[bPosition].opened == 0){
+		return -1;
+	}
 
 	//printf("File closed successfully\n");
 	inodeList[aux].inodeArray[bPosition].opened = 0;
@@ -383,12 +394,22 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 	/* position inside the block */
 	int bPosition = fileDescriptor % INODE_PER_BLOCK;
 
+	/* If the file is closed we cannot move its pointer */
+	if(inodeList[aux].inodeArray[bPosition].opened == 0){
+		return -1;
+	}
+
 	/* If the file descriptor does not exist or no bytes to read or the offset is larger than the file size */
-	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || offset <= 0 || offset > inodeList[aux].inodeArray[bPosition].size ) return -1;
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || abs(offset) > inodeList[aux].inodeArray[bPosition].size){
+		return -1;
+	} 
 	
 	/* Modify the position from the current one */
 	if(whence == FS_SEEK_CUR){
-		inodeList[aux].inodeArray[bPosition].ptr = offset;
+		if((inodeList[aux].inodeArray[bPosition].ptr + offset) > inodeList[aux].inodeArray[bPosition].size){
+			return -1;
+		}
+		inodeList[aux].inodeArray[bPosition].ptr += offset;
 	}
 	/* Modify the position from the beginning of the file */
 	else if(whence == FS_SEEK_BEGIN){
@@ -402,7 +423,6 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 		/* The whence has a wrong value */
 		return -1;
 	}
-
 	return 0;
 }
 
