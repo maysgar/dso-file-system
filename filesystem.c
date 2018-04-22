@@ -280,10 +280,10 @@ int closeFile(int fileDescriptor)
  int readFile(int fileDescriptor, void *buffer, int numBytes)
  {
   int bytesRead = 0;
+  int auxRead = 0;
   int aux = fileDescriptor / INODE_PER_BLOCK;
   int position = fileDescriptor % INODE_PER_BLOCK;
   int pointer = inodeList[aux].inodeArray[position].ptr;
-  char buffer_r[numBytes];
 
   /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
     to the end of the file or if the inode is unused, error */
@@ -305,12 +305,15 @@ int closeFile(int fileDescriptor)
     of the file then proceed to read as normal until the bytes to read have been read. */
     if(pointer + numBytes < inodeList[aux].inodeArray[position].size){
       /* Read the inode until the numBytes has been read*/
-      if(bread(DEVICE_IMAGE,sb.firstInode+position,buffer_r) < 0) return -1;
+      while(auxRead < 0){
+        if(bread(DEVICE_IMAGE,sb.firstInode+position,buffer_block) < 0) return -1;
+	auxRead -= BLOCK_SIZE;
+      } 
       pointer += numBytes; /* Update pointer */
     }
     else{
       char buffer_r2[inodeList[aux].inodeArray[position].size-pointer];
-      if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_r2) < 0) return -1;
+      if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block) < 0) return -1;
       pointer = inodeList[aux].inodeArray[position].size;
       bytesRead = inodeList[aux].inodeArray[position].size-pointer;
     }
