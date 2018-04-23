@@ -289,8 +289,7 @@ int closeFile(int fileDescriptor)
 
 	 /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
        to the end of the file or if the inode is unused, error */
-  if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0 ||
-     pointer == inodeList[aux].inodeArray[position].size || sb.i_map[fileDescriptor] == 0){
+  if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0 || sb.i_map[fileDescriptor] == 0){
     return -1;
   }
 
@@ -305,6 +304,8 @@ int closeFile(int fileDescriptor)
   /* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
   if(inodeList[aux].inodeArray[position].size == 0){ return 0;} /* Return 0 bytes (empty file) */
   /* Size is not equal to zero */
+	
+  lseekFile(fileDescriptor, 0, FS_SEEK_BEGIN);
 
   /* If the number of bytes to be read plus the bytes to be read are less than the size
   of the file then proceed to read as normal until the bytes to read have been read. */
