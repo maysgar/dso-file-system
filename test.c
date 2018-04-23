@@ -63,9 +63,13 @@ int checkWhenceLseek();
 int checkNegativeLseek();
 int checkNoFileLseek();
 
+/* write tests */
 int test_write1();
 int test_write2();
 int test_write3();
+
+/* read tests */
+int test_read();
 
 
 /**
@@ -384,6 +388,13 @@ else blocks_toWrite(345,67,2048);
 return 0;
 }
 
+int test_read(){
+	char  buf [300];
+	/* Normal execution of closeFile */
+	if(testOutput(readFile(0, buf, 200), "readFile") < 0) {return -1;}
+	printf("%s\n", buf);
+	return 0;
+}
 
 
 /**
@@ -576,6 +587,8 @@ int main() {
 
 	/*** test for closing a file ***/
 	test_closeFile();
+
+	test_read();
 
 	return 0;
 }

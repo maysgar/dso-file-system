@@ -98,3 +98,7 @@ int alloc (void);
 int ifree (int inode_id);
 int bfree (int block_id);
 int bmap(int inode_position, int offset);
+int syncSP();
+int syncIN();
+int blocks_toWrite(int bytesToWrite, int fileSize, int blockSize);
+

@@ -22,9 +22,6 @@
 
 superblock_t sb; /* superblock */
 inode_block_t * inodeList; /* Struct of inodes */
-char buffer_block[2048];
-
-int blocks_toWrite(int bytesToWrite, int fileSize, int blockSize);
 
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
@@ -171,7 +168,6 @@ int createFile(char *fileName)
 	inodeList[aux].inodeArray[position].size = 0;
 	/* We set the new file to closed */
 	inodeList[aux].inodeArray[position].opened = 0;
-	//strcpy(inode[position].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*3))));   Hay que cambiar el padding
 
 	//if(bwrite(DEVICE_IMAGE,sb.firstInode,buffer_block) == -1) return -3;
 	return 0;
@@ -293,10 +289,13 @@ int closeFile(int fileDescriptor)
   int aux = fileDescriptor / INODE_PER_BLOCK;
   int position = fileDescriptor % INODE_PER_BLOCK;
   int pointer = inodeList[aux].inodeArray[position].ptr;
-  int i = inodeList[aux].inodeArray[position].indirectBlock;
+  index_file_t indBlock;
+  int i = 0;
+  char buffer_block[2048]; /* CAMBIAR GABO */
 
-  /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
-    to the end of the file or if the inode is unused, error */
+
+	 /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
+       to the end of the file or if the inode is unused, error */
   if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0 ||
      pointer == inodeList[aux].inodeArray[position].size || sb.i_map[fileDescriptor] == 0){
     return -1;
@@ -307,30 +306,37 @@ int closeFile(int fileDescriptor)
     openFile(inodeList[aux].inodeArray[position].name);
   }
 
+  /* Read the indirect block of the inode */
+  if(bread(DEVICE_IMAGE, inodeList[aux].inodeArray[position].indirectBlock, (char *)(&indBlock)) < 0){ return -1;}
+
   /* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
-  if(inodeList[aux].inodeArray[position].size == 0) return 0; /* Return 0 bytes (empty file) */
+  if(inodeList[aux].inodeArray[position].size == 0){ return 0;} /* Return 0 bytes (empty file) */
   /* Size is not equal to zero */
-  else{
-    /* If the number of bytes to be read plus the bytes to be read are less than the size
-    of the file then proceed to read as normal until the bytes to read have been read. */
-    if(pointer + numBytes < inodeList[aux].inodeArray[position].size){
-      /* Read the inode until the numBytes has been read*/
-      while(auxRead < 0){
-        if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor+i,buffer_block) < 0) return -1;
-				auxRead -= BLOCK_SIZE;
-				i++;
-      }
-      pointer += numBytes; /* Update pointer */
+
+  /* MIRAR EL POINTER DONDE ESTA Y HACER COSAS DEPENDIENDO DE CADA CASO */
+
+  /* If the number of bytes to be read plus the bytes to be read are less than the size
+  of the file then proceed to read as normal until the bytes to read have been read. */
+  if(pointer + numBytes < inodeList[aux].inodeArray[position].size){
+    /* Read the inode until the numBytes has been read*/
+    while(auxRead < 0){
+    	/* buffer_block al segundo bloque se sobreescribe */
+        if(bread(DEVICE_IMAGE,sb.firstDataBlock+indBlock.pos[i],buffer_block) < 0){ return -1;}
+        auxRead -= BLOCK_SIZE; /* Cambiar esto por favor */
+        i++;
     }
-    else{
-      if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block) < 0) return -1;
+    /* Cambiar */
+    pointer += numBytes; /* Update pointer */
+  }
+  else{
+   	/* aquí yo ya no se que pasa bro */
+    if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block) < 0){ return -1;}
       pointer = inodeList[aux].inodeArray[position].size;
       bytesRead = inodeList[aux].inodeArray[position].size-pointer;
     }
     char buffer_b[bytesRead];
     memcpy(buffer, buffer_b, numBytes); /* Copy whole bytes read to buffer */
     return bytesRead;
-  }
  }
 
 /*
@@ -353,11 +359,13 @@ int closeFile(int fileDescriptor)
  */
 int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	int aux = fileDescriptor / INODE_PER_BLOCK;
-	int position = fileDescriptor % INODE_PER_BLOCK;
+	int aux = fileDescriptor / (INODE_PER_BLOCK);
+	int position = fileDescriptor % (INODE_PER_BLOCK);
 	int needed_blocks = 0;
 	int block_free = 0;
 	index_file_t dummy;
+	char buffer_block[2048]; /* CAMBIAR GABO */
+
 
 	/* Errors... */
 	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes <= 0
@@ -366,15 +374,17 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
   	}
 
 	/* NF3 */
-	if(numBytes > MAX_FILE_SIZE) return -1; /* ARREGLAR */
+	if( (inodeList[aux].inodeArray[position].size + numBytes) > MAX_FILE_SIZE) return -1;
 
 	/* If the file is not opened we proceed to open it */
 	if(inodeList[aux].inodeArray[position].opened == 0){
 	  openFile(inodeList[aux].inodeArray[position].name);
 	}
 
+	/* Calculate the number of blocks needed to write */
 	needed_blocks = blocks_toWrite(numBytes, inodeList[aux].inodeArray[position].size, BLOCK_SIZE);
 
+	/* Gabo? */
 	block_free = alloc();
 
 	for (int i = 0; i < needed_blocks; i++) {
@@ -487,16 +497,37 @@ int umount (void){
  */
 int syncFS (void){
 	/* write the superblock into the first block of the disk */
-	if( bwrite(DEVICE_IMAGE, 1, (char *) (&sb)) < 0){
-	    printf("Error in bwrite (syncFS)\n");
-        return -1;
-	}
+	if(syncSP() < 0){ return -1;}
 	/* write the inode list to disk */
+	if(syncIN() < 0) { return -1;}
+	return 0;
+}
+
+/**
+ * Writes the superblock into the disk
+ *
+ * @return -1 in error and 0 otherwise
+ */
+int syncSP(){
+	/* write the superblock into the first block of the disk */
+	if( bwrite(DEVICE_IMAGE, 1, (char *) (&sb)) < 0){
+		printf("Error in bwrite (syncFS)\n");
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * Writes the inode_block_t into the disk
+ *
+ * @return -1 in error and 0 otherwise
+ */
+int syncIN(){
 	for(int i = 0; i < sb.inodesBlocks; i++){
 		if( bwrite(DEVICE_IMAGE, i+sb.firstInode, (char *) (&inodeList) + i*BLOCK_SIZE) < 0){
 			printf("Error in bwrite (syncFS)\n");
-            return -1;
-        }
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -680,8 +711,6 @@ int bmap(int inode_position, int offset){
 	}
 	return -1;
 }
-
-
 
 /**
  * Gets the number of blocks needed to write the requested bytes
