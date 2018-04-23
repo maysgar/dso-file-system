@@ -135,7 +135,7 @@ int checkCreateFile(){
 	if(inodeList[0].inodeArray[0].size != 0){ /* check number of blocks for the inode map */
 		return -1;
 	}
-	if(inodeList[0].inodeArray[0].directBlock != 0){ /* check number of blocks for the data map */
+	if(inodeList[0].inodeArray[0].indirectBlock != 0){ /* check number of blocks for the data map */
 		return -1;
 	}
 	if(inodeList -> inodeArray[0].opened != 0){ /* check file created is closed */
@@ -212,7 +212,7 @@ int checkRemoveFile(){
 	if(inodeList[0].inodeArray[0].size != 0){ /* check number of blocks for the inode map */
 		return -1;
 	}
-	if(inodeList[0].inodeArray[0].directBlock == 44){ /* check number of blocks for the data map */
+	if(inodeList[0].inodeArray[0].indirectBlock == 44){ /* check number of blocks for the data map */
 		return -1;
 	}
 	if(inodeList[0].inodeArray[0].opened != 0){ /* check number of blocks for the data map */

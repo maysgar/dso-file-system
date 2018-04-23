@@ -86,9 +86,9 @@ int mkFS(long deviceSize)
 		printf("Error in umount\n");
 		return -1;
 	}
-	printSuperBlock(sb);
+	//printSuperBlock(sb);
 	/* Write superblock */
-	bwrite(DEVICE_IMAGE,0,buffer_block);
+	//bwrite(DEVICE_IMAGE,0,buffer_block);    Por favor leeros el puto código
 	return 0;
 }
 
@@ -366,14 +366,14 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
   	}
 
 	/* NF3 */
-	if(numBytes > MAX_FILE_SIZE) return -1;
+	if(numBytes > MAX_FILE_SIZE) return -1; /* ARREGLAR */
 
 	/* If the file is not opened we proceed to open it */
 	if(inodeList[aux].inodeArray[position].opened == 0){
 	  openFile(inodeList[aux].inodeArray[position].name);
 	}
 
-	needed_blocks = bytes_toWrite(numBytes, inodeList[aux].inodeArray[position].size, BLOCK_SIZE);
+	needed_blocks = blocks_toWrite(numBytes, inodeList[aux].inodeArray[position].size, BLOCK_SIZE);
 
 	block_free = alloc();
 
