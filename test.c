@@ -286,10 +286,6 @@ int test_closeFile(){
  * @return 0 if all the tests are correct and -1 otherwise
  */
 int checkCloseFile(){
-
-	if(0 < 0){ /* check the input file descriptor is negative */
-		return -1;
-	}
 	if(inodeList[0].inodeArray[0].opened != 0){ /* check the file is closed */
 		return -1;
 	}
