@@ -85,12 +85,10 @@ typedef struct{
 } inode_block_t;
 
 
-void printSuperBlock(superblock_t superBlock);
 int umount (void); /* write the default File System into the disk */
 int syncFS(void); /* writes the metadata into the disk */
 
 int needed_blocks(int bits, char type);
-void printInode(inode_t inode);
 int blocks_toWrite();
 int getInodePosition(char *fileName);
 int ialloc (void);

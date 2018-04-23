@@ -80,10 +80,8 @@ int mkFS(long deviceSize)
 
 	/* write the default file system into disk */
 	if( umount() < 0 ){ /* check for errors in umount */
-		printf("Error in umount\n");
 		return -1;
 	}
-	printSuperBlock(sb);
 	return 0;
 }
 
@@ -98,13 +96,11 @@ int mountFS(void)
 {
     /* read the superblock from the disk to the new superblock */
     if(bread(DEVICE_IMAGE, 1, (char *) (&sb)) < 0){
-        printf("Error in bread (mountFS)\n");
         return -1;
     }
     /* read the inodeList from disk */
     for(int i = 0; i < sb.inodesBlocks; i++){
         if( bread(DEVICE_IMAGE, i+sb.firstInode, (char *) (&inodeList) + i*BLOCK_SIZE) < 0){
-            printf("Error in bread (mountFS)\n");
             return -1;
         }
     }
@@ -265,7 +261,6 @@ int closeFile(int fileDescriptor)
 		return -1;
 	}
 
-	//printf("File closed successfully\n");
 	inodeList[aux].inodeArray[bPosition].opened = 0;
 	syncIN();
 	return 0;
@@ -490,7 +485,6 @@ int umount (void){
 
 	/* flush metadata on disk */
 	if( syncFS() < 0){ /* check errors in sync */
-		printf("Error in sync\n");
 		return -1;
 	}
 	return 0;
@@ -517,7 +511,6 @@ int syncFS (void){
 int syncSP(){
 	/* write the superblock into the first block of the disk */
 	if( bwrite(DEVICE_IMAGE, 1, (char *) (&sb)) < 0){
-		printf("Error in bwrite (syncFS)\n");
 		return -1;
 	}
 	return 0;
@@ -531,35 +524,10 @@ int syncSP(){
 int syncIN(){
 	for(int i = 0; i < sb.inodesBlocks; i++){
 		if( bwrite(DEVICE_IMAGE, i+sb.firstInode, (char *) (&inodeList) + i*BLOCK_SIZE) < 0){
-			printf("Error in bwrite (syncFS)\n");
 			return -1;
 		}
 	}
 	return 0;
-}
-
-void printSuperBlock(superblock_t superBlock){
-    if(printf("Magic number: %d\n", superBlock.magicNum) < 0){
-        printf("Could not print Magic number");
-    }
-    if(printf("Number of i-nodes in the device: %d\n", superBlock.numInodes) < 0){
-        printf("Could not print Number of i-nodes in the device");
-    }
-    if(printf("Number of the 1st i-node in the device  %d\n", superBlock.firstInode) < 0){
-        printf("Could not print Number of the 1st i-node in the device");
-    }
-    if(printf("Number of data blocks in the device: %d\n", superBlock.dataBlockNum) < 0){
-        printf("Could not print Number of data blocks in the device");
-    }
-    if(printf("Number of the 1st data block: %d\n", superBlock.firstDataBlock) < 0){
-        printf("Could not print Number of the 1st data block");
-    }
-    if(printf("Total disk space: %d\n", superBlock.deviceSize) < 0){
-        printf("Could not print Total disk space");
-    }
-    if(printf("Padding field: %d\n\n", SUPERBLOCK_PADDING) < 0){
-        printf("Could not print Padding field:");
-    }
 }
 
 /**
@@ -582,7 +550,6 @@ int needed_blocks(int amount, char type){
 		}
 	}
 	else{
-		printf("Wrong input type.\n bits: 'b'\n Bytes: 'B'\n");
 		return -1;
 	}
 	return aux;
@@ -652,24 +619,6 @@ int bfree (int block_id){
 	/* free block */
 	bitmap_setbit(sb.b_map, block_id, 0);
 	return 0;
-}
-
-/**
- * Print all the fields from an inode
- *
- * @param inode : the inode to extract the fields
- * @return -1 in case of error an 0 otherwise
- */
-void printInode(inode_t inode){
-	if(printf("File name: %s\n", inode.name) < 0){
-        printf("Could not print Magic number");
-    }
-    if(printf("File size in bytes: %d\n", inode.size) < 0){
-        printf("Could not print the File size");
-    }
-    if(printf("Direct block number: %d\n", inode.indirectBlock) < 0){
-        printf("Could not print Direct block number");
-    }
 }
 
 /**

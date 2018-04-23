@@ -433,7 +433,6 @@ int test_read(){
                 "y lo en ella contenido. Fecha en Valladolid, a veinte y seis días del mes\n"
                 "de setiembre de mil y seiscientos y cuatro años.#FINAL#",3315);
 	if(testOutput(readFile(0, buf, 3000), "readFile") < 0) {return -1;}
-	printf("%s\n", buf);
 	return 0;
 }
 
