@@ -391,8 +391,9 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	}
 
 	memcpy(buffer_w, &dummy, BLOCK_SIZE);
-  	/* Update the size of the file */
+  	/* Update the size of the file and the pointer */
 	inodeList[aux].inodeArray[position].size += numBytes;
+	inodeList[aux].inodeArray[position].ptr += numBytes;
 
 	/* Write the indirectBlock in disk */
 	bwrite(DEVICE_IMAGE,block_free,buffer_w); /* store indirect in disk */
