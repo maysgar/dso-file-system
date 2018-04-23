@@ -318,7 +318,7 @@ int test_lseek(){
 }
 
 /**
- * Test case where the file pointer is moved more than than the end of the file
+ * Test case where the file pointer is moved more than the end of the file
  *
  * @return 0 if all the tests are correct and -1 otherwise
  */

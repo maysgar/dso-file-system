@@ -438,6 +438,9 @@ int lseekFile(int fileDescriptor, long offset, int whence)
 		if((inodeList[aux].inodeArray[bPosition].ptr + offset) > inodeList[aux].inodeArray[bPosition].size){
 			return -1;
 		}
+		if((inodeList[aux].inodeArray[bPosition].ptr + offset) < 0){
+			return -1;
+		}
 		inodeList[aux].inodeArray[bPosition].ptr += offset;
 	}
 	/* Modify the position from the beginning of the file */
