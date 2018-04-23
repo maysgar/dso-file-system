@@ -62,10 +62,14 @@ typedef struct{
 typedef struct{
     char name[NAME_MAX];                /* file name */
     unsigned int size;                  /* Current file size in Bytes */
-    unsigned int directBlock;           /* Direct block number */
+    unsigned int indirectBlock;          /* Direct block number */
     unsigned short opened;              /* To know if a file is opened or closed */  /* Yo creo que se podría poder un char broooos */
     unsigned short ptr;
 } inode_t;
+
+typedef struct{
+    unsigned int pos[512];                /* Max file indexes of blocks */
+} index_file_t;
 
 /*
  * Size of inode_block_t:

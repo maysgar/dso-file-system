@@ -24,6 +24,8 @@ superblock_t sb; /* superblock */
 inode_block_t * inodeList; /* Struct of inodes */
 char buffer_block[2048];
 
+int blocks_toWrite(int bytesToWrite, int fileSize, int blockSize);
+
 /*
  * @brief 	Generates the proper file system structure in a storage device, as designed by the student.
  *
@@ -162,7 +164,7 @@ int createFile(char *fileName)
 	int aux = position / INODE_PER_BLOCK;
 	position = position % INODE_PER_BLOCK;
 
-	inodeList[aux].inodeArray[position].directBlock = bPos;
+	inodeList[aux].inodeArray[position].indirectBlock = bPos;
 	inodeList[aux].inodeArray[position].ptr = 0;
 
   	strcpy(inodeList[aux].inodeArray[position].name, fileName);
@@ -198,7 +200,7 @@ int removeFile(char *fileName)
 		}
 		strcpy(inodeList[aux].inodeArray[position].name, "");
 		inodeList[aux].inodeArray[position].size = 0;
-		inodeList[aux].inodeArray[position].directBlock = 0;
+		inodeList[aux].inodeArray[position].indirectBlock = 0;
 
 		inodeList[aux].inodeArray[position].ptr = 0;
 
@@ -291,7 +293,7 @@ int closeFile(int fileDescriptor)
   int aux = fileDescriptor / INODE_PER_BLOCK;
   int position = fileDescriptor % INODE_PER_BLOCK;
   int pointer = inodeList[aux].inodeArray[position].ptr;
-  int i = inodeList[aux].inodeArray[position].directBlock;
+  int i = inodeList[aux].inodeArray[position].indirectBlock;
 
   /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
     to the end of the file or if the inode is unused, error */
@@ -351,46 +353,32 @@ int closeFile(int fileDescriptor)
  */
 int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
-	int bytesWritten = 0;
-	int auxWritten = numBytes;
 	int aux = fileDescriptor / INODE_PER_BLOCK;
 	int position = fileDescriptor % INODE_PER_BLOCK;
-	int i = inodeList[aux].inodeArray[position].directBlock;
-	int pointer = inodeList[aux].inodeArray[position].ptr;
+	int block_free = 0;
 
 	/* Errors... */
-	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes <= 0 ||
-  	   pointer == inodeList[aux].inodeArray[position].size || sb.i_map[fileDescriptor] == 0){
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes <= 0
+		 || sb.i_map[fileDescriptor] == 0){
   	  return -1;
   	}
 
 	/* NF3 */
 	if(numBytes > 1048576) return -1;
 
-  	/* If the file is not opened we proceed to open it */
-  	if(inodeList[aux].inodeArray[position].opened == 0){
-  	  openFile(inodeList[aux].inodeArray[position].name);
-  	}
-
-	/* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
-	if(inodeList[aux].inodeArray[position].size == 0) return bytesWritten; /* Return 0 bytes (empty file) */
-	else{ //Size is not equal to zero
-		while(auxWritten < 0){
-			if(bwrite(DEVICE_IMAGE,sb.firstInode+fileDescriptor+i,buffer_block) < 0) return -1;
-			auxWritten -= BLOCK_SIZE;
-			/* Update of the pointer with the bytes to be read */
-			pointer += BLOCK_SIZE;
-			/* If the size of the file is less than the number of bytes to be written
-			 	 update data blocks for the file... */
-			if(inodeList[aux].inodeArray[position].size < numBytes){
-				//TODO: Update the data blocks preserving the data disk limits
-			}
-			i++;
-		}
-		char buffer_b[bytesWritten];
-		memcpy(buffer, buffer_b, numBytes); /* Copy whole bytes written to buffer */
-		return bytesWritten;
+	/* If the file is not opened we proceed to open it */
+	if(inodeList[aux].inodeArray[position].opened == 0){
+	  openFile(inodeList[aux].inodeArray[position].name);
 	}
+
+	needed_blocks = bytes_toWrite(numBytes, inodeList[aux].inodeArray[position].size, BLOCK_SIZE);
+
+	block_free = alloc();
+	index_file_t dummy;
+	memcpy(buffer_block, &dummy, BLOCK_SIZE);
+
+	bwrite(DEVICE_IMAGE,block_free,buffer_block);
+	inodeList[aux].inodeArray[position].indirectBlock = block_free;
 	return 0;
 }
 
@@ -632,7 +620,7 @@ void printInode(inode_t inode){
     if(printf("File size in bytes: %d\n", inode.size) < 0){
         printf("Could not print the File size");
     }
-    if(printf("Direct block number: %d\n", inode.directBlock) < 0){
+    if(printf("Direct block number: %d\n", inode.indirectBlock) < 0){
         printf("Could not print Direct block number");
     }
 }
@@ -678,7 +666,7 @@ int bmap(int inode_position, int offset){
 		/* know in what block of inodes it is */
 		int aux = inode_position / INODE_PER_BLOCK;
 		inode_position = inode_position % INODE_PER_BLOCK;
-		return inodeList[aux].inodeArray[inode_position].directBlock;
+		return inodeList[aux].inodeArray[inode_position].indirectBlock;
 	}
 	return -1;
 }
@@ -687,28 +675,22 @@ int bmap(int inode_position, int offset){
 
 /**
  * Gets the number of blocks needed to write the requested bytes
- * 
+ *
  * @param bytesToWrite: number of bytes requested to write, fileSize: size of the file, blockSize: size of the block
  * @return -1 in case of error, or the number of blocks needed otherwise
- * 
+ *
  */
  int blocks_toWrite(int bytesToWrite, int fileSize, int blockSize){
-	printf("Bytes to write: %d , file size: %d, block size: %d\n", bytesToWrite, fileSize, blockSize);
 	int remainder = fileSize % blockSize;
-	printf("Lo que esta escrito en el ultimo bloque: %d\n", remainder);
 	int falta = blockSize - remainder;
-	printf("Lo que queda para llenar el ultimo bloque: %d\n", falta);
 	int newBlockBytes = bytesToWrite - falta;
 	if(newBlockBytes < 0){
-		printf("Cantidad de bloques nuevos necesarios: 0\n\n");
 		return 0;
 	}
-	printf("Bytes a escribir en nuevos bloques: %d\n", newBlockBytes);
 
 	int newBlocks = newBlockBytes/blockSize;
 	if(newBlockBytes % blockSize != 0){
 		newBlocks++;
 	}
-	printf("Cantidad de bloques nuevos necesarios: %d\n\n", newBlocks);
 	return newBlocks;
  }
