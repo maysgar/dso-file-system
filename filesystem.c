@@ -290,7 +290,6 @@ int closeFile(int fileDescriptor)
   int position = fileDescriptor % INODE_PER_BLOCK;
   int pointer = inodeList[aux].inodeArray[position].ptr;
   index_file_t indBlock;
-  char buffer_block[BLOCK_SIZE];
   int needed_blocks = 0;
 
 	 /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
@@ -318,23 +317,29 @@ int closeFile(int fileDescriptor)
   if(pointer + numBytes <= inodeList[aux].inodeArray[position].size){
       /* Read the inode until the numBytes has been read*/
 	  for(int j = 0; j <= needed_blocks; j++) {
-	      printf("Iteration %d,     indirect %d\n", j, indBlock.pos[j]);
-		  if (bread(DEVICE_IMAGE, sb.firstDataBlock + indBlock.pos[j], buffer_block) < 0) { return -1; }
+		  if (bread(DEVICE_IMAGE, sb.firstDataBlock + indBlock.pos[j], buffer+BLOCK_SIZE*j) < 0) { return -1; }
 	  }
-    	pointer += numBytes; /* Update pointer */
+	  char newBuf[numBytes];
+	  memcpy(newBuf,buffer,  numBytes);
+	  newBuf[numBytes] = '\0';
+
+	  memset(buffer,0, numBytes + 1);
+
+      memcpy(buffer,newBuf,  numBytes);
+
+      pointer += numBytes; /* Update pointer */
+      syncIN();
+      return bytesRead;
   }
   else{
-   	/* aquí yo ya no se que pasa bro */
-    if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block) < 0){ return -1;}
+      for(int j = 0; j <= needed_blocks; j++) {
+          if (bread(DEVICE_IMAGE, sb.firstDataBlock + indBlock.pos[j], buffer+BLOCK_SIZE*j) < 0) { return -1; }
+      }
       pointer = inodeList[aux].inodeArray[position].size;
       bytesRead = inodeList[aux].inodeArray[position].size-pointer;
+      syncIN();
+      return bytesRead;
     }
-    printf("Buffer: %s          NumBytes: %d\n", buffer_block, numBytes);
-
-    memcpy(buffer, buffer_block, numBytes); /* Copy whole bytes read to buffer */
-     printf("Buffer: %s\n", (char *) buffer);
-     syncIN();
-    return bytesRead;
  }
 
 /*
