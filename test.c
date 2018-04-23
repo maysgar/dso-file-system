@@ -389,8 +389,51 @@ int test_read(){
 	char  buf [300];
 	unmountFS();
 	createFile("Pra.txt");
-	writeFile(0,"Fran",5);
-	if(testOutput(readFile(0, buf, 5), "readFile") < 0) {return -1;}
+	writeFile(0,"#INIT#Por cuanto por parte de vos, Miguel de Cervantes, nos fue fecha relación\n"
+				"que habíades compuesto un libro intitulado El ingenioso hidalgo de la\n"
+				"Mancha, el cual os había costado mucho trabajo y era muy útil y provechoso,\n"
+				"nos pedistes y suplicastes os mandásemos dar licencia y facultad para le\n"
+				"poder imprimir, y previlegio por el tiempo que fuésemos servidos, o como la\n"
+				"nuestra merced fuese; lo cual visto por los del nuestro Consejo, por cuanto\n"
+				"en el dicho libro se hicieron las diligencias que la premática últimamente\n"
+				"por nos fecha sobre la impresión de los libros dispone, fue acordado que\n"
+				"debíamos mandar dar esta nuestra cédula para vos, en la dicha razón; y nos\n"
+				"tuvímoslo por bien. Por la cual, por os hacer bien y merced, os damos\n"
+				"licencia y facultad para que vos, o la persona que vuestro poder hubiere, y\n"
+				"no otra alguna, podáis imprimir el dicho libro, intitulado El ingenioso\n"
+				"hidalgo de la Mancha, que desuso se hace mención, en todos estos nuestros\n"
+				"reinos de Castilla, por tiempo y espacio de diez años, que corran y se\n"
+				"cuenten desde el dicho día de la data desta nuestra cédula; so pena que la\n"
+				"persona o personas que, sin tener vuestro poder, lo imprimiere o vendiere,\n"
+				"o hiciere imprimir o vender, por el mesmo caso pierda la impresión que\n"
+				"hiciere, con los moldes y aparejos della; y más, incurra en pena de\n"
+				"cincuenta mil maravedís cada vez que lo contrario hiciere. La cual dicha\n"
+				"pena sea la tercia parte para la persona que lo acusare, y la otra tercia\n"
+				"parte para nuestra Cámara, y la otra tercia parte para el juez que lo\n"
+				"sentenciare. Con tanto que todas las veces que hubiéredes de hacer imprimir\n"
+				"el dicho libro, durante el tiempo de los dichos diez años, le traigáis al\n"
+				"nuestro Consejo, juntamente con el original que en él fue visto, que va\n"
+				"rubricado cada plana y firmado al fin dél de Juan Gallo de Andrada, nuestro\n"
+				"Escribano de Cámara, de los que en él residen, para saber si la dicha\n"
+				"impresión está conforme el original; o traigáis fe en pública forma de cómo\n"
+				"por corretor nombrado por nuestro mandado, se vio y corrigió la dicha\n"
+				"impresión por el original, y se imprimió conforme a él, y quedan impresas\n"
+				"las erratas por él apuntadas, para cada un libro de los que así fueren\n"
+				"impresos, para que se tase el precio que por cada volume hubiéredes de\n"
+				"haber. Y mandamos al impresor que así imprimiere el dicho libro, no imprima\n"
+				"el principio ni el primer pliego dél, ni entregue más de un solo libro con\n"
+				"el original al autor, o persona a cuya costa lo imprimiere, ni otro alguno,\n"
+				"para efeto de la dicha correción y tasa, hasta que antes y primero el dicho\n"
+				"libro esté corregido y tasado por los del nuestro Consejo; y, estando\n"
+				"hecho, y no de otra manera, pueda imprimir el dicho principio y primer\n"
+				"pliego, y sucesivamente ponga esta nuestra cédula y la aprobación, tasa y\n"
+				"erratas, so pena de caer e incurrir en las penas contenidas en las leyes y\n"
+				"premáticas destos nuestros reinos. Y mandamos a los del nuestro Consejo, y\n"
+				"a otras cualesquier justicias dellos, guarden y cumplan esta nuestra cédula\n"
+				"y lo en ella contenido. Fecha en Valladolid, a veinte y seis días del mes\n"
+				"de setiembre de mil y seiscientos y cuatro años.#FINAL#",3315);
+	if(testOutput(readFile(0, buf, 1000), "readFile") < 0) {return -1;}
+	buf[1000] = '\0';
 	printf("%s\n", buf);
 	return 0;
 }

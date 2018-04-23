@@ -126,8 +126,8 @@ int unmountFS(void)
   	}
   	/* Free  */
   	for(int i = 0; i < sb.numInodes; i++){
-		ifree(i);
-		bfree(i);
+		if(ifree(i) < 0) {return -1;}
+		if(bfree(i) < 0) {return -1;}
 	}
     return 0;
 }
@@ -288,15 +288,17 @@ int closeFile(int fileDescriptor)
   int bytesRead = 0;
   int aux = fileDescriptor / INODE_PER_BLOCK;
   int position = fileDescriptor % INODE_PER_BLOCK;
-  int pointer = inodeList[aux].inodeArray[position].ptr;
   index_file_t indBlock;
-  char buffer_block[BLOCK_SIZE];
   int needed_blocks = 0;
 
-	 /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
+  lseekFile(fileDescriptor,0,FS_SEEK_BEGIN);
+  int pointer = inodeList[aux].inodeArray[position].ptr;
+
+     /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
        to the end of the file or if the inode is unused, error */
+
   if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0 ||
-     pointer == inodeList[aux].inodeArray[position].size || sb.i_map[fileDescriptor] == 0){
+     pointer == inodeList[aux].inodeArray[position].size || bitmap_getbit(sb.i_map, fileDescriptor) == 0) {
     return -1;
   }
 
@@ -305,7 +307,7 @@ int closeFile(int fileDescriptor)
     openFile(inodeList[aux].inodeArray[position].name);
   }
 
-  /* Read the indirect block of the inode */
+     /* Read the indirect block of the inode */
   if(bread(DEVICE_IMAGE, inodeList[aux].inodeArray[position].indirectBlock, (char *)(&indBlock)) < 0){ return -1;}
 
   /* Retrieve inode of the file (fileDescriptor == index on array of inodes) */
@@ -315,26 +317,35 @@ int closeFile(int fileDescriptor)
   /* If the number of bytes to be read plus the bytes to be read are less than the size
   of the file then proceed to read as normal until the bytes to read have been read. */
   needed_blocks = blocks_toWrite(numBytes, inodeList[aux].inodeArray[position].size, BLOCK_SIZE);
+  char buffer_b[(needed_blocks+1)*(BLOCK_SIZE)];
+  int needed_bytes = (needed_blocks+1)*(BLOCK_SIZE);
+
   if(pointer + numBytes <= inodeList[aux].inodeArray[position].size){
       /* Read the inode until the numBytes has been read*/
 	  for(int j = 0; j <= needed_blocks; j++) {
-	      printf("Iteration %d,     indirect %d\n", j, indBlock.pos[j]);
-		  if (bread(DEVICE_IMAGE, sb.firstDataBlock + indBlock.pos[j], buffer_block) < 0) { return -1; }
+          needed_bytes -= BLOCK_SIZE;
+          if(needed_bytes < 0){
+              int remainder = inodeList[aux].inodeArray[position].size % BLOCK_SIZE;
+              needed_bytes = remainder;
+              memcpy(buffer, buffer_b, needed_bytes);
+              break;
+          }
+		  if (bread(DEVICE_IMAGE, sb.firstDataBlock + indBlock.pos[j], buffer+BLOCK_SIZE*j) < 0) { return -1; }
 	  }
-    	pointer += numBytes; /* Update pointer */
+      pointer += numBytes; /* Update pointer */
+      syncIN();
+      return bytesRead;
   }
   else{
-   	/* aquí yo ya no se que pasa bro */
-    if(bread(DEVICE_IMAGE,sb.firstInode+fileDescriptor,buffer_block) < 0){ return -1;}
+      for(int j = 0; j <= needed_blocks; j++) {
+          if (bread(DEVICE_IMAGE, sb.firstDataBlock + indBlock.pos[j], buffer+BLOCK_SIZE*j) < 0) { return -1; }
+      }
       pointer = inodeList[aux].inodeArray[position].size;
       bytesRead = inodeList[aux].inodeArray[position].size-pointer;
+      memcpy(buffer, buffer_b, numBytes); /* Copy whole bytes read to buffer */
+      syncIN();
+      return bytesRead;
     }
-    printf("Buffer: %s          NumBytes: %d\n", buffer_block, numBytes);
-
-    memcpy(buffer, buffer_block, numBytes); /* Copy whole bytes read to buffer */
-     printf("Buffer: %s\n", (char *) buffer);
-     syncIN();
-    return bytesRead;
  }
 
 /*
@@ -361,8 +372,8 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	int position = fileDescriptor % (INODE_PER_BLOCK);
 	int needed_blocks = 0;
 	int block_free = 0;
+    char buffer_w[BLOCK_SIZE];
 	index_file_t dummy;
-	char buffer_w[BLOCK_SIZE];
 
 	/* Errors... */
 	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes <= 0
@@ -380,7 +391,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 
 	/* Calculate the number of blocks needed to write */
 	needed_blocks = blocks_toWrite(numBytes, inodeList[aux].inodeArray[position].size, BLOCK_SIZE);
-	
+
 	block_free = alloc();
 
 	for (int i = 0; i <= needed_blocks; i++) {
@@ -391,7 +402,9 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 
 	memcpy(buffer_w, &dummy, BLOCK_SIZE);
   	/* Update the size of the file */
-	inodeList[aux].inodeArray[position].size += numBytes;
+
+    inodeList[aux].inodeArray[position].ptr += numBytes;
+    inodeList[aux].inodeArray[position].size += numBytes;
 
 	/* Write the indirectBlock in disk */
 	bwrite(DEVICE_IMAGE,block_free,buffer_w); /* store indirect in disk */
