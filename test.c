@@ -63,6 +63,10 @@ int checkWhenceLseek();
 int checkNegativeLseek();
 int checkNoFileLseek();
 
+int test_write1();
+int test_write2();
+int test_write3();
+
 
 /**
  * Test all the funtionalities of the method mkFS
@@ -362,6 +366,24 @@ int checkNoFileLseek(){
 
 }
 
+int test_write1(){
+if(blocks_toWrite(45,67,2048) < 0) return -1;
+else blocks_toWrite(45,67,2048);
+return 0;
+}
+
+int test_write2(){
+if(blocks_toWrite(0,67,2048) < 0) return -1;
+else blocks_toWrite(0,67,2048);
+return 0;
+}
+
+int test_write3(){
+if(blocks_toWrite(7,3,4) < 0) return -1;
+else blocks_toWrite(345,67,2048);
+return 0;
+}
+
 
 
 /**
@@ -544,6 +566,10 @@ int main() {
 	unmountFS();
 	createFile("text.txt");
 	openFile("text.txt");
+
+	test_write1();
+	test_write2();
+	test_write3();
 
 	/*** test for moving the pointer of a file ***/
 	test_lseek();

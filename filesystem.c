@@ -293,8 +293,6 @@ int closeFile(int fileDescriptor)
   int pointer = inodeList[aux].inodeArray[position].ptr;
   int i = inodeList[aux].inodeArray[position].directBlock;
 
-
-
   /* If the file descriptor does not exist or no bytes to read or pointer is set_pointer
     to the end of the file or if the inode is unused, error */
   if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0 ||
@@ -361,7 +359,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	int pointer = inodeList[aux].inodeArray[position].ptr;
 
 	/* Errors... */
-	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes == 0 ||
+	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes <= 0 ||
   	   pointer == inodeList[aux].inodeArray[position].size || sb.i_map[fileDescriptor] == 0){
   	  return -1;
   	}
@@ -684,3 +682,33 @@ int bmap(int inode_position, int offset){
 	}
 	return -1;
 }
+
+
+
+/**
+ * Gets the number of blocks needed to write the requested bytes
+ * 
+ * @param bytesToWrite: number of bytes requested to write, fileSize: size of the file, blockSize: size of the block
+ * @return -1 in case of error, or the number of blocks needed otherwise
+ * 
+ */
+ int blocks_toWrite(int bytesToWrite, int fileSize, int blockSize){
+	printf("Bytes to write: %d , file size: %d, block size: %d\n", bytesToWrite, fileSize, blockSize);
+	int remainder = fileSize % blockSize;
+	printf("Lo que esta escrito en el ultimo bloque: %d\n", remainder);
+	int falta = blockSize - remainder;
+	printf("Lo que queda para llenar el ultimo bloque: %d\n", falta);
+	int newBlockBytes = bytesToWrite - falta;
+	if(newBlockBytes < 0){
+		printf("Cantidad de bloques nuevos necesarios: 0\n\n");
+		return 0;
+	}
+	printf("Bytes a escribir en nuevos bloques: %d\n", newBlockBytes);
+
+	int newBlocks = newBlockBytes/blockSize;
+	if(newBlockBytes % blockSize != 0){
+		newBlocks++;
+	}
+	printf("Cantidad de bloques nuevos necesarios: %d\n\n", newBlocks);
+	return newBlocks;
+ }
