@@ -355,7 +355,9 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 {
 	int aux = fileDescriptor / INODE_PER_BLOCK;
 	int position = fileDescriptor % INODE_PER_BLOCK;
+	int needed_blocks = 0;
 	int block_free = 0;
+	index_file_t dummy;
 
 	/* Errors... */
 	if(fileDescriptor < 0 || fileDescriptor > sb.numInodes || numBytes <= 0
@@ -364,7 +366,7 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
   	}
 
 	/* NF3 */
-	if(numBytes > 1048576) return -1;
+	if(numBytes > MAX_FILE_SIZE) return -1;
 
 	/* If the file is not opened we proceed to open it */
 	if(inodeList[aux].inodeArray[position].opened == 0){
@@ -374,12 +376,20 @@ int writeFile(int fileDescriptor, void *buffer, int numBytes)
 	needed_blocks = bytes_toWrite(numBytes, inodeList[aux].inodeArray[position].size, BLOCK_SIZE);
 
 	block_free = alloc();
-	index_file_t dummy;
-	memcpy(buffer_block, &dummy, BLOCK_SIZE);
 
-	bwrite(DEVICE_IMAGE,block_free,buffer_block);
+	for (int i = 0; i < needed_blocks; i++) {
+		dummy.pos[i] = alloc();
+		bwrite(DEVICE_IMAGE, dummy.pos[i], buffer+BLOCK_SIZE*i);
+	}
+	memcpy(buffer_block, &dummy, BLOCK_SIZE);
+  /* Update the size of the file */
+	inodeList[aux].inodeArray[position].size += numBytes;
+
+	/* Write the indirectBlock in disk */
+	bwrite(DEVICE_IMAGE,block_free,buffer_block); /* store indirect in disk */
 	inodeList[aux].inodeArray[position].indirectBlock = block_free;
-	return 0;
+
+	return numBytes;
 }
 
 /*
