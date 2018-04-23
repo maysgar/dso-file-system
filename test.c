@@ -67,6 +67,9 @@ int checkNoFileLseek();
 int test_write1();
 int test_write2();
 int test_write3();
+int test_write4();
+int test_write5();
+int test_write6();
 
 /* read tests */
 int test_read();
@@ -381,6 +384,21 @@ else blocks_toWrite(345,67,2048);
 return 0;
 }
 
+int test_write4(){
+if(writeFile(2,"sdsdf",4) > 0) return -1;
+return 0;
+}
+
+int test_write5(){
+if(writeFile(7,"sdsdf",-4) > 0) return -1;
+return 0;
+}
+
+int test_write6(){
+if(writeFile(7,"sdsdf",0) > 0) return -1;
+return 0;
+}
+
 int test_read(){
 	char  buf [1049287];
 	unmountFS();
@@ -617,6 +635,9 @@ int main() {
 	test_write1();
 	test_write2();
 	test_write3();
+	test_write4();
+	test_write5();
+	test_write6();	
 
 	/*** test for moving the pointer of a file ***/
 	test_lseek();
