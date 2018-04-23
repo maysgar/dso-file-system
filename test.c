@@ -139,15 +139,12 @@ int checkCreateFile(){
 	if(inodeList[0].inodeArray[0].size != 0){ /* check number of blocks for the inode map */
 		return -1;
 	}
-	if(inodeList[0].inodeArray[0].indirectBlock != 0){ /* check number of blocks for the data map */
+	if(inodeList[0].inodeArray[0].indirectBlock != sb.firstDataBlock){ /* check number of blocks for the data map */
 		return -1;
 	}
 	if(inodeList -> inodeArray[0].opened != 0){ /* check file created is closed */
 		return -1;
 	}
-	/*if(strcmp(inode[0].padding, (char *)malloc(SIZE_OF_BLOCK - (NAME_MAX+(sizeof(int)*2)))) != 0){ // check number of inodes     Cambiar padding
-		return -1;
-	}*/
 	if(sb.i_map[0] != 1){
 		return -1;
 	}
@@ -390,8 +387,10 @@ return 0;
 
 int test_read(){
 	char  buf [300];
-	/* Normal execution of closeFile */
-	if(testOutput(readFile(0, buf, 200), "readFile") < 0) {return -1;}
+	unmountFS();
+	createFile("Pra.txt");
+	writeFile(0,"Fran",5);
+	if(testOutput(readFile(0, buf, 5), "readFile") < 0) {return -1;}
 	printf("%s\n", buf);
 	return 0;
 }
